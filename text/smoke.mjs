@@ -52,7 +52,7 @@ async function playOne(label){
     i = idx(s, /Block head/); if (i >= 0){ const r = await page.evaluate(() => TXT.duel.round); await key(String((r % 4) + 1)); continue; }
     i = idx(s, /^\d\) Guard/);
     if (i >= 0){ // duel: guard twice to hit the blocked-move toast once, else strike
-      if (!guardTried && /GUARD/.test(T.slice(-6).join('\n').split('Round').pop() || '')){ await key(String(i+1)); s = await shot(); if (/Can't Guard twice/.test(s.note)){ toast = s.note; guardTried = true; T.push('   >> ' + s.note, ''); } continue; }
+      if (!guardTried && (await page.evaluate(() => { const D = TXT.duel; return !!(D && D.f[TXT.mode === 'hot' ? (TXT.passTo ?? 0) : 0].lastGuard); }))){ await key(String(i+1)); s = await shot(); if (/Can't Guard twice/.test(s.note)){ toast = s.note; guardTried = true; T.push('   >> ' + s.note, ''); } continue; }
       const g = (await page.evaluate(() => window.TXT.duel.round)) % 3 === 1 && !guardTried; await key(String((g ? i : idx(s, /^\d\) Strike/)) + 1)); continue; }
     i = idx(s, /tree|bush|canopy/i); if (i >= 0){ const t = await page.evaluate(() => window.TXT.turn);
       await key(String((t % 2 ? idx(s, /tree/i) : Math.max(idx(s, /canopy/i), idx(s, /bush/i))) + 1));
