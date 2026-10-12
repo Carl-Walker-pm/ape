@@ -15,7 +15,7 @@ node sim/game_sim.mjs --only fruit
 Options: `--seed`, `--pairs` (matches per ape pair), `--skill` (matches per skill-test opponent), `--only balance|skill|fruit`, `--rules path/to/rules.js`, `--hp vinny=110,...` and `--stat moe.spd=3.2` (what-if tuning without editing the game).
 
 ## What it checks
-- **Ape balance:** every ape vs every other ape, with the full 90-second gathering phase on the real arena (node respawns, Vinny-only canopies, golden fruit at 60 s), crafting and the duel, seats alternated, bots drawn from aggressive / defensive / gatherer / mixed. Target 45-55% for every pair.
+- **Ape balance:** every ape vs every other ape, with the full 90-second gathering phase on the real arena (node respawns, Vinny-only canopies, golden fruit at 0:30 left (60 s in)), crafting and the duel, seats alternated, bots drawn from aggressive / defensive / gatherer / mixed. Target 45-55% for every pair.
 - **Skill test:** a "smart" bot (plans the club, models the opponent's move frequencies) vs random, aggressive, defensive, gatherer, mixed and the in-game bot. Target 65% or more.
 - **Does fruit matter:** the smart bot with 0 / 3 / 6 fruit (and the golden fruit) against the same opponents.
 
@@ -24,3 +24,6 @@ Options: `--seed`, `--pairs` (matches per ape pair), `--skill` (matches per skil
 - `run-balance-10k.txt`: 10,000 matches per pair for seeds 42, 7 and 1234, plus a diagnostic run. (Its header names `../mvp/rules.js`: it was run from the working copy, which is byte-identical to `play/rules.js`.)
 
 All stats, bots and targets are team proposals for the Nov 18 fun test, not final design.
+
+## Bot difficulty in the game
+The prototype's vs-bot mode has **Easy** (default for testers: the bot walks and gathers at 55% speed) and **Hard** (full speed). The difficulty lives only in `play/game.js`; the sim always uses the full-speed rules from `play/rules.js`, so the bot-vs-bot results here are unaffected by it.

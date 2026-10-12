@@ -36,3 +36,9 @@ button:focus-visible{outline:3px solid #fff}
 .foot{opacity:.6;font-size:13px}.foot a{color:#ffc94a}
 .tag{display:inline-block;background:rgba(255,201,74,.18);color:#ffc94a;border-radius:999px;padding:4px 12px;font-size:13px;margin-bottom:10px}
 table{margin:10px auto;border-collapse:collapse}td{padding:4px 14px;text-align:left}
+
+.moves button.off{opacity:.45;filter:grayscale(1);cursor:not-allowed}
+.log.warn{color:#ffb4a0;font-weight:700}
+
+#toast{position:absolute;left:50%;top:120px;transform:translate(-50%,-10px);background:#3a1610;color:#ffe0d6;border:2px solid #ff9b80;border-radius:12px;padding:10px 18px;font-weight:700;opacity:0;transition:.2s;pointer-events:none;z-index:9}
+#toast.show{opacity:1;transform:translate(-50%,0)}

@@ -39,7 +39,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
 function show(html, cls='screen'){ ui.innerHTML = `<div class="${cls}">${html}</div>`; return ui.firstChild; }
 
 // ---- game state ----
-const G = window.APE = {screen:'title', mode:'bot', picks:[], players:[], t:0, nodes:[], gold:null, duel:null, keys:{}};
+const G = window.APE = {screen:'title', mode:'bot', diff:'easy', picks:[], players:[], t:0, nodes:[], gold:null, duel:null, keys:{}};
 
 function newPlayer(ape, i, isBot){
   return {ape, i, bot:isBot, x: i===0 ? 2.5 : 21.5, y: i===0 ? 7.5 : 8.5, tx:null, ty:null,
@@ -53,15 +53,21 @@ function title(){
     <h1>Going <em>ApeSh!t</em></h1>
     <p class="sub">Pick your ape, grab the fruit, win the duel.</p>
     <div><button id="b-bot">Play vs bot</button><button class="ghost" id="b-hot">2 players, one keyboard</button></div>
+    <div style="margin-top:10px;font-size:14px">Bot: <label><input type="radio" name="diff" value="easy" ${G.diff!=='hard'?'checked':''}> Easy</label>
+      <label style="margin-left:10px"><input type="radio" name="diff" value="hard" ${G.diff==='hard'?'checked':''}> Hard</label></div>
     <p style="opacity:.75;font-size:14px;margin-top:22px">Gather for 90 seconds, craft a club, then duel. Turn-based, no luck involved.</p>`,
     'screen bg shade').style.backgroundImage = 'linear-gradient(180deg,rgba(10,24,16,.25),rgba(10,24,16,.85)),url(img/hero.jpg)';
+  document.querySelectorAll('[name=diff]').forEach(r => r.onchange = () => { G.diff = r.value; });
   document.getElementById('b-bot').onclick = () => { G.mode='bot'; select(); };
   document.getElementById('b-hot').onclick = () => { G.mode='hot'; select(); };
 }
 
 // world-bound wrappers around the shared rules
 const nodeAt = p => R.nodeAt(G,p), canUse = (p,n) => R.canUse(G,p,n), gatherTick = (p,dt) => R.gatherTick(G,p,dt);
-const clampMove = R.clampMove, botMove = (p,dt) => R.botMove(G,p,dt);
+const clampMove = R.clampMove;
+// Easy bot (default for testers): walks and gathers at 55% speed. Hard = the full-speed bot the sim uses.
+const botSlow = () => G.diff==='hard' ? 1 : 0.55;
+const botMove = (p,dt) => R.botMove(G,p,dt*botSlow());
 const {clubWood, canCraft, doCraft, clubAtk, dmg, heal, resolve, legal, botPick} = R;
 G.resolve = resolve;
 
@@ -81,7 +87,10 @@ function renderSelect(){
     <p style="font-size:14px;opacity:.8">${G.mode==='hot'?'P1 moves with WASD, P2 with the arrow keys.':'Move with WASD or click where to go.'}</p>
     <button class="ghost" id="b-back">Back</button>`, 'screen bg shade');
   el.style.backgroundImage = 'linear-gradient(180deg,rgba(10,24,16,.7),rgba(10,24,16,.92)),url(img/apes-lineup.jpg)';
+  const first = el.querySelector('.ape:not(.taken)');
+  if (first){ first.classList.add('sel'); setTimeout(() => first.focus(), 0); }
   el.querySelectorAll('.ape').forEach(d => {
+    d.onfocus = () => { el.querySelectorAll('.ape').forEach(o => o.classList.remove('sel')); d.classList.add('sel'); };
     const go = () => pick(+d.dataset.k);
     d.onclick = go; d.onkeydown = e => { if(e.key==='Enter'||e.key===' ') go(); };
   });
@@ -102,12 +111,12 @@ function startMatch(){
 }
 function startGather(){
   G.players.forEach((p,i) => Object.assign(p, newPlayer(p.ape,i,p.bot)));
-  G.nodes = R.makeNodes(); G.gold = null; G.t = 0; G.screen = 'gather'; G.last = performance.now();
+  G.nodes = R.makeNodes(); G.gold = null; G.goldCue = false; G.t = 0; G.screen = 'gather'; G.last = performance.now();
   G.flash = [];
   hud.classList.remove('hidden');
   show(`<div style="position:absolute;bottom:10px;left:0;right:0;text-align:center;pointer-events:none;font-size:14px;opacity:.85">
-    ${G.mode==='hot'?'P1: WASD · P2: arrow keys':'WASD or click to move'} · walk onto a bush or tree to gather · golden fruit appears in the centre at 1:00</div>
-    <button class="ghost" id="b-done" style="position:absolute;right:8px;bottom:36px;font-size:13px;padding:6px 14px">Finish early</button>`,'');
+    ${G.mode==='hot'?'P1: WASD · P2: arrow keys':'WASD or click to move'} · walk onto a bush or tree to gather · golden fruit appears in the centre at 0:30 left</div>
+    <button class="ghost" id="b-done" style="position:absolute;left:50%;transform:translateX(-50%);top:40px;font-size:12px;padding:4px 12px">Finish early</button>`,'');
   document.getElementById('b-done').onclick = endGather;
 }
 function humanMove(p, dt){
@@ -115,17 +124,20 @@ function humanMove(p, dt){
   let dx = 0, dy = 0;
   if (alt){ dx = (k.ArrowRight?1:0)-(k.ArrowLeft?1:0); dy = (k.ArrowDown?1:0)-(k.ArrowUp?1:0); }
   else { dx = (k.KeyD?1:0)-(k.KeyA?1:0); dy = (k.KeyS?1:0)-(k.KeyW?1:0); }
-  if (dx||dy){ p.tx = null; }
+  if (dx||dy){ p.tx = null; p.path = null; }
+  else if (p.tx==null && p.path && p.path.length){ const s = p.path.shift(); p.tx = s.x; p.ty = s.y; }
+  if (dx||dy){}
   else if (p.tx!=null){ dx = p.tx-p.x; dy = p.ty-p.y; if (Math.hypot(dx,dy) < 0.08){ p.tx=null; dx=dy=0; } }
   if (p.busy>0 && !(dx||dy)) return;
   if (dx||dy) p.busy = 0, p.node = null;
-  if (p.tx!=null){ const d=Math.hypot(dx,dy), step=p.ape.spd*dt; if (step>=d){ p.x=p.tx; p.y=p.ty; p.tx=null; return; } }
+  if (p.tx!=null){ const d=Math.hypot(dx,dy), step=p.ape.spd*dt; if (step>=d){ p.x=p.tx; p.y=p.ty; p.tx=null; if (p.path && !p.path.length) p.path = null; return; } }
   clampMove(p, dx, dy, dt);
 }
 function gatherUpdate(dt){
   G.t += dt;
+  if (!G.goldCue && G.t >= GOLD_AT-5){ G.goldCue = true; G.flash.push({x:GOLD.x,y:GOLD.y-1.2,txt:'Something golden is ripening in the centre...',t:5}); }
   if (!G.gold && G.t >= GOLD_AT){ G.gold = {taken:null}; G.flash.push({x:GOLD.x,y:GOLD.y-1,txt:'Golden fruit in the centre!',t:3}); }
-  for (const p of G.players){ p.bot ? botMove(p,dt) : humanMove(p,dt); gatherTick(p,dt); }
+  for (const p of G.players){ p.bot ? botMove(p,dt) : humanMove(p,dt); gatherTick(p, p.bot ? dt*botSlow() : dt); }
   G.flash.forEach(f => f.t -= dt); G.flash = G.flash.filter(f => f.t > 0);
   const left = Math.max(0, GATHER_SECS - G.t);
   const [a,b] = G.players;
@@ -173,7 +185,7 @@ function drawArena(){
     ctx.fillStyle='#ffcc2e'; circle(gx+T, gy+T, 16); ctx.fillStyle='#fff6c4'; circle(gx+T-5, gy+T-5, 5);
   } else if (!G.gold){
     ctx.fillStyle='rgba(255,255,255,.55)'; ctx.font='12px system-ui'; ctx.textAlign='center';
-    ctx.fillText('golden fruit at 1:00', gx+T, gy+T+4);
+    ctx.fillText(G.goldCue ? 'golden fruit soon!' : 'golden fruit at 0:30', gx+T, gy+T+4);
   }
   for (const p of G.players) drawApe(p.x*T, p.y*T, p, 1);
   for (const f of G.flash){
@@ -240,18 +252,38 @@ function duelUI(){
     <div style="font-size:14px;opacity:.8">Round ${D.round}</div>
     <div class="log" id="log">${esc(D.log)}</div>
     <div style="margin-bottom:6px">${who}</div>
-    <div class="moves">${Object.entries(MOVES).map(([k,m]) => `<button data-m="${k}" ${L.includes(k)?'':'disabled'}>${m.label}${k==='eat'?` (${me.p.fruit} · ${R.MAX_EATS+(me.p.gold?1:0)-(me.eaten||0)} left)`:''}<small>${m.hint}</small></button>`).join('')}</div>
+    <div class="moves">${Object.entries(MOVES).map(([k,m]) => `<button data-m="${k}" class="${L.includes(k)?'':'off'}" aria-disabled="${!L.includes(k)}" title="${L.includes(k)?'':esc(whyNot(me,k))}">${m.label}${k==='eat'?` (${me.p.fruit} · ${R.MAX_EATS+(me.p.gold?1:0)-(me.eaten||0)} left)`:''}<small>${L.includes(k)?m.hint:'⛔ '+esc(whyNot(me,k))}</small></button>`).join('')}</div>
     <div style="font-size:12px;opacity:.7;margin-top:6px">Keys 1–4 · Strike beats Feint · Guard beats Strike · Feint beats Guard and Eat · no dice, just reads</div></div>`, '');
   ui.querySelectorAll('[data-m]').forEach(b => b.onclick = () => choose(chooser, b.dataset.m));
 }
+function toast(msg){
+  let t = document.getElementById('toast');
+  if (!t){ t = document.createElement('div'); t.id = 'toast'; t.setAttribute('role','alert'); document.getElementById('app').appendChild(t); }
+  t.textContent = msg; t.className = 'show'; clearTimeout(toast.h); toast.h = setTimeout(() => t.className = '', 2600);
+}
+// why a move can't be picked right now (mirrors rules.js legal(); text only)
+function whyNot(f, m){
+  if (m==='guard' && f.lastGuard) return 'Can\'t Guard twice in a row';
+  if (m==='eat'){
+    if (f.p.fruit < 1) return 'No fruit left to eat';
+    if ((f.eaten||0) >= R.MAX_EATS + (f.p.gold?1:0)) return 'No Eats left this duel';
+    if (f.hp >= f.max) return 'Already at full HP';
+  }
+  return 'Not allowed right now';
+}
 function choose(i, m){
-  const D = G.duel; if (G.screen!=='duel' || !legal(D.f[i]).includes(m)) return;
+  const D = G.duel; if (G.screen!=='duel') return;
+  if (!legal(D.f[i]).includes(m)){
+    toast(`${whyNot(D.f[i], m)}. Pick another move.`);
+    return;
+  }
   D.picks[i] = m;
   if (G.mode==='bot') D.picks[1] = botPick(D.f[1], D.f[0], D.hist);
   if (D.picks[0]==null || D.picks[1]==null){ D.log = 'Player 1 has picked.'; return passScreen(2, ''); }
   const [ma, mb] = D.picks;
   D.hist.push(ma);
   D.log = `${D.f[0].p.ape.name}: ${MOVES[ma].label} vs ${D.f[1].p.ape.name}: ${MOVES[mb].label}. ` + resolve(D.f[0], D.f[1], ma, mb);
+  D.final = D.log;
   D.last = [ma, mb]; D.anim = 0.6; D.picks = [null,null]; D.round++;
   const [fa,fb] = D.f;
   if (fa.hp<=0 || fb.hp<=0 || D.round > MAX_ROUNDS) return setTimeout(result, 700);
@@ -283,7 +315,7 @@ function drawDuel(dt){
     ctx.fillStyle='#fff'; ctx.font='bold 15px system-ui'; ctx.textAlign = i===0?'left':'right';
     ctx.fillText(`${f.p.ape.name}  ${Math.max(0,f.hp)}/${f.max} HP`, i===0?bx:bx+w, 74);
     ctx.font='13px system-ui';
-    ctx.fillText(`🍌 ${f.p.fruit}  ${f.p.club?'🏏 club +'+clubAtk(f.p):'no club'}${f.p.gold?'  ★':''}${f.lastGuard?'  (guarded last turn)':''}`, i===0?bx:bx+w, 94);
+    ctx.fillText(`🍌 ${f.p.fruit}  ${f.p.club?'🏏 club +'+clubAtk(f.p):'no club'}${f.p.gold?'  ★':''}${f.lastGuard && G.screen!=='result'?'  (guarded last turn)':''}`, i===0?bx:bx+w, 94);
     if (D.last){ ctx.font='bold 20px system-ui'; ctx.textAlign='center'; ctx.fillStyle='#ffe28a'; ctx.fillText(MOVES[D.last[i]].label, x, 322); }
   });
 }
@@ -300,7 +332,7 @@ function result(){
   const name = w==null ? null : D.f[w].p.ape.name;
   const headline = w==null ? 'A draw!' : (G.mode==='bot' ? (w===0?'You win the duel!':`${name} wins this one.`) : `${name} (Player ${w+1}) wins!`);
   show(`<div class="panel"><h2>${esc(headline)}</h2>
-    <p>${esc(D.log)}</p>
+    <p><span style="opacity:.7">Final round:</span> ${esc(D.final || D.log)}</p>
     <p style="opacity:.8;font-size:14px">${D.round-1} rounds · ${esc(fa.p.ape.name)} ${Math.max(0,fa.hp)} HP · ${esc(fb.p.ape.name)} ${Math.max(0,fb.hp)} HP</p>
     <button id="b-rematch" style="font-size:20px;padding:14px 34px">Rematch</button><br>
     <p style="font-size:13px;opacity:.7">Rematches this session: ${SESSION.rematches}</p>
@@ -327,9 +359,21 @@ cv.addEventListener('mousedown', e => {
   if (G.screen!=='gather') return;
   const r = cv.getBoundingClientRect();
   const p = G.players[0];
-  p.tx = Math.min(W-0.5, Math.max(0.5, (e.clientX-r.left)/r.width*W));
-  p.ty = Math.min(H-0.5, Math.max(1.5, (e.clientY-r.top)/r.height*H));
+  let tx = Math.floor((e.clientX-r.left)/r.width*W), ty = Math.floor((e.clientY-r.top)/r.height*H);
+  tx = Math.min(W-1, Math.max(0, tx)); ty = Math.min(H-1, Math.max(1, ty));
+  // clicked on or next to a node: walk onto the node itself, so gathering starts on arrival
+  let best = null, bd = 9;
+  for (const n of G.nodes){ const d = Math.max(Math.abs(n.x-tx), Math.abs(n.y-ty)); if (d <= 1 && (n.kind!=='high' || p.ape.id==='vinny') && d < bd){ bd = d; best = n; } }
+  if (best){ tx = best.x; ty = best.y; }
+  p.path = gridPath(Math.floor(p.x), Math.floor(p.y), tx, ty); p.tx = null;
+  G.clickTarget = {x:tx, y:ty, t:0.6};
 });
+// step-by-step path on the grid (8 directions; the grove has no walls)
+function gridPath(x0, y0, x1, y1){
+  const path = []; let x = x0, y = y0;
+  while (x !== x1 || y !== y1){ x += Math.sign(x1-x); y += Math.sign(y1-y); path.push({x:x+0.5, y:y+0.5}); }
+  return path;
+}
 function frame(now){
   const dt = Math.min(0.05, (now - (G.last||now))/1000); G.last = now;
   if (G.screen==='gather'){ gatherUpdate(dt); if (G.screen==='gather') drawArena(); }

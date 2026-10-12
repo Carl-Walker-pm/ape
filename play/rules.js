@@ -4,7 +4,7 @@
 (function(root){
 'use strict';
 const W = 24, H = 16;                        // arena 24x16 tiles (game-map.md)
-const GATHER_SECS = 90, GOLD_AT = 60;        // golden fruit spawns 60 s in, centre
+const GATHER_SECS = 90, GOLD_AT = 60;        // golden fruit spawns 60 s in (0:30 left), centre
 const EAT_HEAL = 20, GOLD_HP = 0, GOLD_FRUIT = 1, MAX_ROUNDS = 30, MAX_EATS = 3;   // 3 Eats per duel; the golden fruit allows a 4th
 // (GOLD_HP stays 0: +10 HP made the 60 s race decide too many ape pairs, see sim/run-game.txt)
 const GOLD = {x:11.5, y:7.5};
