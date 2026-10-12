@@ -3,19 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Going ApeSh!t — Pick your ape, grab the fruit, win the duel.</title>
-<meta name="description" content="A cheeky jungle game about gathering, crafting and one-on-one duels. Coming soon.">
+<title>Going ApeSh!t</title>
+<meta name="description" content="Two apes. One jungle. Secret picks. A text duel game that plays in your browser, no download.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://carl-walker-pm.github.io/ape/">
-<meta property="og:title" content="Going ApeSh!t — Pick your ape, grab the fruit, win the duel.">
-<meta property="og:description" content="A cheeky jungle game about gathering, crafting and one-on-one duels. Coming soon.">
-<meta property="og:image" content="https://carl-walker-pm.github.io/ape/assets/img/og.jpg">
+<meta property="og:title" content="Going ApeSh!t">
+<meta property="og:description" content="Two apes. One jungle. Secret picks. A text duel game that plays in your browser, no download.">
+<meta property="og:image" content="https://carl-walker-pm.github.io/ape/assets/img/text/menu.jpg">
 <meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
+<meta property="og:image:height" content="844">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Going ApeSh!t — Pick your ape, grab the fruit, win the duel.">
-<meta name="twitter:description" content="A cheeky jungle game about gathering, crafting and one-on-one duels. Coming soon.">
-<meta name="twitter:image" content="https://carl-walker-pm.github.io/ape/assets/img/og.jpg">
+<meta name="twitter:title" content="Going ApeSh!t">
+<meta name="twitter:description" content="Two apes. One jungle. Secret picks. A text duel game that plays in your browser, no download.">
+<meta name="twitter:image" content="https://carl-walker-pm.github.io/ape/assets/img/text/menu.jpg">
 <link rel="preload" href="assets/fonts/Fredoka-700.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="assets/fonts/fonts.css">
 <style>
@@ -120,86 +120,89 @@ footer a{color:var(--gold2)}
 .lineup{margin:44px 0 0;border-radius:28px;overflow:hidden;box-shadow:0 30px 70px rgba(16,36,22,.25)}
 .hero .gametitle{max-width:none;opacity:1;font-family:Fredoka,sans-serif;font-weight:700;font-size:clamp(3rem,8vw,6.5rem);line-height:.95;margin:18px 0 0;letter-spacing:-.01em;color:#fff;text-shadow:0 6px 0 rgba(0,0,0,.25),0 10px 40px rgba(0,0,0,.4)}.gametitle span{color:var(--gold2)}
 .hero h1{font-size:clamp(1.8rem,3.8vw,3rem)!important;margin-top:10px!important}
+/* hero: real screen next to the title; art captioned as illustration */
+.herogrid{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:end}
+.heroshot{margin:0;border-radius:18px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.25);background:#0c1c12}
+.heroshot img{display:block;width:100%;height:auto}.heroshot figcaption{font-size:.78rem;padding:6px 12px;color:#e9efe4;background:#0c1c12}
+.illus{position:absolute;z-index:3;right:12px;bottom:90px;font-size:.72rem;font-weight:700;color:#fff;background:rgba(12,28,18,.75);padding:2px 9px;border-radius:99px}
+.cta .illus{top:12px;bottom:auto}
+.pill{background:rgba(12,28,18,.72)!important;border-color:rgba(255,255,255,.35)!important}
+@media(max-width:900px){.herogrid{grid-template-columns:1fr;gap:24px}
+ .hero:before{background:linear-gradient(180deg,rgba(12,28,18,.55) 0%,rgba(12,28,18,.85) 30%,rgba(12,28,18,.85) 100%)!important}
+ .hero p,.hero h1,.hero .gametitle{text-shadow:0 2px 12px rgba(0,0,0,.6)}}
 </style>
 </head>
 <body>
 <nav><div class="wrap">
 <a class="brand" href="#top"><i></i>Going ApeSh!t</a>
-<ul><li><a href="#apes">Apes</a></li><li><a href="#world">World</a></li><li><a href="#pvp">PvP</a></li><li><a href="#rpg">RPG</a></li><li><a href="#art">Concept art</a></li><li><a href="#roadmap">Roadmap</a></li></ul>
+<ul><li><a href="#apes">Apes</a></li><li><a href="#world">How it plays</a></li><li><a href="#pvp">Duel</a></li><li><a href="#rpg">Fair play</a></li><li><a href="#art">Screens</a></li><li><a href="#roadmap">Roadmap</a></li></ul>
 </div></nav>
 
-<header class="hero" id="top"><div class="wrap">
-<span class="pill"><b></b>In development · coming soon</span>
+<header class="hero" id="top" aria-label="Going ApeSh!t (background: illustration)"><span class="illus">Illustration</span><div class="wrap"><div class="herogrid"><div>
+<span class="pill"><b></b>In development · text version</span>
 <p class="gametitle">Going ApeSh<span>!</span>t</p>
-<h1>Pick your ape, grab the fruit, <em>win the duel.</em></h1>
-<p>A cheeky jungle game about gathering, crafting and one-on-one duels. Build up your ape.</p>
+<h1>Two apes. One jungle. <em>Secret picks.</em></h1>
+<p>Gather, craft a club, then outguess your rival in a duel of nerve.</p>
 <div class="btns">
-<a class="btn gold" href="./play/">▶ Play the prototype</a>
-<a class="btn ghost" href="https://github.com/Carl-Walker-pm/ape">★ Follow development</a>
-<a class="btn ghost" href="#apes">See the game ↓</a>
+<a class="btn gold" href="./text/">▶ Play now</a>
+<a class="btn ghost" href="#world">See the game ↓</a>
 </div>
-</div></header>
+<p><small>Plays in your browser, no download.</small></p>
+</div>
+<figure class="heroshot"><img src="assets/img/text/duel.jpg" alt="Real game screen: a duel reveal in the text version, with a speech bubble on an ape card" width="1200" height="844"><figcaption>Real game screen</figcaption></figure>
+</div></div></header>
 
 <section id="apes"><div class="wrap">
-<div class="center reveal"><div class="eyebrow">Meet the apes</div><h2>Every ape plays differently</h2>
-<p class="lead">Pick an ape with its own strengths, then make it yours.</p></div>
-<div class="lineup reveal"><img src="assets/img/apes-lineup.jpg" alt="Five different cartoon apes standing on wooden pedestals in the jungle" loading="lazy"></div>
+<div class="center reveal"><div class="eyebrow">The apes</div><h2>Each ape has its own trick</h2></div>
+<div class="lineup reveal"><img src="assets/img/text/menu.jpg" alt="The game's start menu: a framed text screen with numbered buttons to start a match" loading="lazy" width="1200" height="844"></div>
 <div class="apes">
-<article class="ape reveal"><img src="assets/img/ape-climber.jpg" alt="A wiry ape hanging from a vine rope" loading="lazy"><div><span class="tag">Climber</span><h3>Vinny</h3><p>Reaches the fruit nobody else can.</p></div></article>
-<article class="ape reveal"><img src="assets/img/ape-smasher.jpg" alt="A big grey ape holding a stone mallet" loading="lazy"><div><span class="tag">Smasher</span><h3>Boulder</h3><p>Hits hard and cracks stone fast.</p></div></article>
-<article class="ape reveal"><img src="assets/img/ape-quick.jpg" alt="A small ape bouncing on a glowing pedestal" loading="lazy"><div><span class="tag">Quick one</span><h3>Zip</h3><p>First in, first out, never still.</p></div></article>
-<article class="ape reveal"><img src="assets/img/ape-tank.jpg" alt="A huge ape in leather straps standing firm" loading="lazy"><div><span class="tag">Tank</span><h3>Big Moe</h3><p>Takes a hit and keeps on smiling.</p></div></article>
-<article class="ape reveal"><img src="assets/img/ape-thinker.jpg" alt="An ape in goggles with a belt full of tools" loading="lazy"><div><span class="tag">Crafter</span><h3>Tinker</h3><p>Turns sticks and stones into clever tools.</p></div></article>
+<article class="ape reveal"><div><span class="tag">Climber</span><h3>The climber</h3><p>Only one who reaches the canopy.</p></div></article>
+<article class="ape reveal"><div><span class="tag">Smasher</span><h3>The smasher</h3><p>Two wood from every tree.</p></div></article>
+<article class="ape reveal"><div><span class="tag">Quick one</span><h3>The quick one</h3><p>Two extra turns to gather.</p></div></article>
+<article class="ape reveal"><div><span class="tag">Tank</span><h3>The tank</h3><p>Every tree drops fruit too.</p></div></article>
+<article class="ape reveal"><div><span class="tag">Crafter</span><h3>The crafter</h3><p>Builds the club with less wood.</p></div></article>
 </div>
 <p class="note center">Working names. Apes and their strengths may change as we build.</p>
 </div></section>
 
 <section id="world"><div class="wrap">
-<div class="center reveal"><div class="eyebrow">The world</div><h2>Head out from home</h2>
-<p class="lead">Start in your home grove, then head out into a world of zones to explore. The further you go, the more you can gather and build.</p></div>
-<div class="mapframe reveal"><img src="assets/img/world-map.jpg" alt="A painted fantasy map of jungle, river, mountains and a cave, with no place names" loading="lazy"></div>
+<div class="center reveal"><div class="eyebrow">How a match goes</div><h2>Gather. Race. Duel.</h2></div>
+<ul class="feats reveal">
+<li><span>🍌</span><div><b>1. Gather.</b><small>Twelve turns to pick fruit, chop wood and craft a club. Each ape has its own trick.</small></div></li>
+<li><span>✨</span><div><b>2. The golden race.</b><small>On turn 8 a golden fruit appears in the centre. Race for it, or keep gathering. If you both go, the ape with less fruit gets it, and nobody does on a tie.</small></div></li>
+<li><span>🥊</span><div><b>3. The duel.</b><small>Strike, Guard, Feint or Eat, picked in secret and revealed together. Read your rival, break their pattern.</small></div></li>
+</ul>
+<div class="mapframe reveal"><img src="assets/img/text/golden-race.jpg" alt="Gathering screen on turn 8: two ape cards with fruit and wood counts, and a golden fruit option to race for in the centre" loading="lazy"></div>
 </div></section>
 
 <section id="pvp"><div class="wrap split">
-<div class="media reveal"><img src="assets/img/shot-duel.jpg" alt="Two apes facing off in a ring of standing stones while a crowd watches" loading="lazy"></div>
-<div class="reveal"><div class="eyebrow">PvP duels</div><h2>One on one. Ape to ape.</h2>
-<p class="lead">Turn-based one-on-one duels. No dice, no random rolls. Lost? Hit rematch.</p>
+<div class="media reveal"><img src="assets/img/text/duel.jpg" alt="Duel screen: both apes' cards with health bars, the last reveal, and buttons for Strike, Guard, Feint and Eat" loading="lazy"></div>
+<div class="reveal"><div class="eyebrow">The duel</div><h2>Secret picks, revealed together.</h2>
+<p class="lead">Strike, Guard, Feint or Eat, picked in secret and revealed together. Read your rival, break their pattern.</p>
 <ul class="feats">
-<li><span>🎯</span><div><b>No dice, no random rolls</b><small>No random rolls. Read your rival and pick your moment.</small></div></li>
-<li><span>🔁</span><div><b>One-click rematch</b><small>Close one? Go again straight away.</small></div></li>
-<li><span>🦍</span><div><b>Your ape, your style</b><small>Each ape's strengths change how a duel plays out.</small></div></li>
+<li><span>🎯</span><div><b>Secret picks</b><small>Both apes choose, then reveal together.</small></div></li>
+<li><span>⌨️</span><div><b>Buttons or number keys</b><small>Every move has a button and a key.</small></div></li>
 </ul></div>
 </div></section>
 
 <section id="rpg"><div class="wrap split rev">
-<div class="media reveal"><img src="assets/img/shot-craft.jpg" alt="An ape in goggles shaping a stone tool at a workbench" loading="lazy"></div>
-<div class="reveal"><div class="eyebrow">Grow your ape (RPG)</div><h2>Start small. Grow mighty.</h2>
-<p class="lead">Pick an ape with its own strengths, earn XP, craft better tools and grow your ape as you play.</p>
-<ul class="feats">
-<li><span>⭐</span><div><b>Earn XP</b><small>Explore, gather and duel to level up.</small></div></li>
-<li><span>🔨</span><div><b>Craft</b><small>Turn what you gather into something useful.</small></div></li>
-<li><span>🪨</span><div><b>Better tools</b><small>Stronger tools let you go further and build more.</small></div></li>
-</ul></div>
+<div class="media reveal"><img src="assets/img/text/result.jpg" alt="End screen: the winner, what decided the duel, and a replay code to play the same game again" loading="lazy"></div>
+<div class="reveal"><div class="eyebrow">Fair by design</div><h2>No dice in duels: secret picks decide it.</h2>
+<p class="lead">Every duel has a replay code. Same code, same game.</p>
+</div>
 </div></section>
 
 <section id="art"><div class="wrap">
-<div class="center reveal"><div class="eyebrow">Concept art</div><h2>A peek into the jungle</h2>
-<p class="lead">Early concept art to show the mood we're going for. Not final gameplay.</p></div>
+<div class="center reveal"><div class="eyebrow">Real screens</div><h2>Straight from the game</h2></div>
 <div class="gallery">
-<figure class="reveal" style="margin:0"><a href="#lb1"><img src="assets/img/shot-gather.jpg" alt="An ape climbing a big tree full of glowing fruit" loading="lazy"><figcaption>Up a tree</figcaption></a></figure>
-<figure class="reveal" style="margin:0"><a href="#lb2"><img src="assets/img/shot-craft.jpg" alt="An ape in goggles shaping a stone tool at a workbench" loading="lazy"><figcaption>At the workbench</figcaption></a></figure>
-<figure class="reveal" style="margin:0"><a href="#lb3"><img src="assets/img/shot-duel.jpg" alt="Two apes facing off in a ring of standing stones while a crowd watches" loading="lazy"><figcaption>Face-off</figcaption></a></figure>
-<figure class="reveal" style="margin:0"><a href="#lb4"><img src="assets/img/shot-select.jpg" alt="An ape select scene with five apes on pedestals" loading="lazy"><figcaption>Pick your ape</figcaption></a></figure>
-<figure class="reveal" style="margin:0"><a href="#lb5"><img src="assets/img/shot-river.jpg" alt="An ape hopping across stepping stones below a waterfall" loading="lazy"><figcaption>Across the river</figcaption></a></figure>
-<figure class="reveal" style="margin:0"><a href="#lb6"><img src="assets/img/shot-victory.jpg" alt="An ape holding up a glowing golden fruit at sunset" loading="lazy"><figcaption>Victory</figcaption></a></figure>
+<figure class="reveal" style="margin:0"><a href="#lb1"><img src="assets/img/text/golden-race.jpg" alt="Gathering screen on turn 8 with the golden fruit race" loading="lazy"><figcaption>The turn 8 race</figcaption></a></figure>
+<figure class="reveal" style="margin:0"><a href="#lb2"><img src="assets/img/text/duel.jpg" alt="Duel screen with the last reveal and the four move buttons" loading="lazy"><figcaption>A duel reveal</figcaption></a></figure>
+<figure class="reveal" style="margin:0"><a href="#lb3"><img src="assets/img/text/result.jpg" alt="End screen showing what decided the duel and the replay code" loading="lazy"><figcaption>The deciding round</figcaption></a></figure>
 </div>
 </div></section>
-<div class="lb" id="lb1"><a class="x" href="#art" aria-label="Close"></a><img src="assets/img/shot-gather.jpg" alt="An ape climbing a big tree full of glowing fruit"><a class="close" href="#art" aria-label="Close">×</a><p>Concept art, not final gameplay</p></div>
-<div class="lb" id="lb2"><a class="x" href="#art" aria-label="Close"></a><img src="assets/img/shot-craft.jpg" alt="An ape in goggles shaping a stone tool at a workbench"><a class="close" href="#art" aria-label="Close">×</a><p>Concept art, not final gameplay</p></div>
-<div class="lb" id="lb3"><a class="x" href="#art" aria-label="Close"></a><img src="assets/img/shot-duel.jpg" alt="Two apes facing off in a ring of standing stones while a crowd watches"><a class="close" href="#art" aria-label="Close">×</a><p>Concept art, not final gameplay</p></div>
-<div class="lb" id="lb4"><a class="x" href="#art" aria-label="Close"></a><img src="assets/img/shot-select.jpg" alt="An ape select scene with five apes on pedestals"><a class="close" href="#art" aria-label="Close">×</a><p>Concept art, not final gameplay</p></div>
-<div class="lb" id="lb5"><a class="x" href="#art" aria-label="Close"></a><img src="assets/img/shot-river.jpg" alt="An ape hopping across stepping stones below a waterfall"><a class="close" href="#art" aria-label="Close">×</a><p>Concept art, not final gameplay</p></div>
-<div class="lb" id="lb6"><a class="x" href="#art" aria-label="Close"></a><img src="assets/img/shot-victory.jpg" alt="An ape holding up a glowing golden fruit at sunset"><a class="close" href="#art" aria-label="Close">×</a><p>Concept art, not final gameplay</p></div>
+<div class="lb" id="lb1"><a class="x" href="#art" aria-label="Close"></a><img src="assets/img/text/golden-race.jpg" alt="Gathering screen on turn 8 with the golden fruit race"><a class="close" href="#art" aria-label="Close">×</a><p>Text version, in development</p></div>
+<div class="lb" id="lb2"><a class="x" href="#art" aria-label="Close"></a><img src="assets/img/text/duel.jpg" alt="Duel screen with the last reveal and the four move buttons"><a class="close" href="#art" aria-label="Close">×</a><p>Text version, in development</p></div>
+<div class="lb" id="lb3"><a class="x" href="#art" aria-label="Close"></a><img src="assets/img/text/result.jpg" alt="End screen showing what decided the duel and the replay code"><a class="close" href="#art" aria-label="Close">×</a><p>Text version, in development</p></div>
 
 <section id="roadmap"><div class="wrap">
 <div class="center reveal"><div class="eyebrow">Roadmap</div><h2>Where we are</h2></div>
@@ -210,15 +213,14 @@ footer a{color:var(--gold2)}
 </div>
 </div></section>
 
-<section class="cta"><div class="wrap reveal">
-<h2>Want to see it grow?</h2>
-<p class="lead">We're building in the open. Follow along and watch the jungle take shape.</p>
-<a class="btn gold" href="https://github.com/Carl-Walker-pm/ape">★ Follow development on GitHub</a>
+<section class="cta" aria-label="Play now (background: illustration)"><span class="illus">Illustration</span><div class="wrap reveal">
+<h2>One duel takes a few minutes. The rematch takes longer.</h2>
+<a class="btn gold" href="./text/">▶ Play now</a>
 </div></section>
 
 <footer><div class="wrap">
 <span>© Going ApeSh!t · In development</span>
-<span><a href="https://github.com/Carl-Walker-pm/ape">GitHub</a> · No cookies, no tracking.</span>
+<span><a href="https://github.com/Carl-Walker-pm/ape">GitHub</a> · No cookies, no trackers.</span>
 </div></footer>
 </body>
 </html>
