@@ -43,17 +43,27 @@ function checkNames(txt, url){
   const fresh = found.filter(n => !nameWarned.has(n)); fresh.forEach(n => nameWarned.add(n));
   if (fresh.length) console.log(`WARN unapproved name in ${where}: ${fresh.join(', ')} (warning only; use --names-strict before publishing /text/)`);
 }
+// Full DOM text (hidden elements too) + attributes that can carry names; used on landing and game.
+// Text nodes joined with spaces: documentElement.textContent glues <span>Climber</span><h3>Vinny</h3> into "ClimberVinny", defeating \b.
+const domText = () => page.evaluate(() => [(() => { const w = document.createTreeWalker(document.documentElement, NodeFilter.SHOW_TEXT), o = []; while (w.nextNode()) o.push(w.currentNode.nodeValue); return o.join(' '); })(),
+  ...[...document.querySelectorAll('[alt],[aria-label],[title],meta[name=description],meta[property^="og:"]')].map(e => [e.getAttribute('alt'), e.getAttribute('aria-label'), e.getAttribute('title'), e.getAttribute('content')].filter(Boolean).join(' '))].join('\n'));
 async function scanLanding(url){
-  await page.goto(url); const t = await page.evaluate(() => [document.title, document.body.innerText,
-    ...[...document.querySelectorAll('img[alt],[aria-label],[title],figcaption,meta[name=description],meta[property^="og:"]')].map(e => [e.alt, e.getAttribute('aria-label'), e.title, e.tagName === 'FIGCAPTION' ? e.textContent : '', e.content].filter(Boolean).join(' '))].join('\n'));
-  checkNames(t, page.url()); ok('landing page: no unapproved ape names (incl. alt/captions)'); }
+  await page.goto(url); checkNames(await domText(), page.url()); ok('landing page: no unapproved ape names (full DOM incl. hidden, alt, captions)');
+  const lbad = [];
+  for (const W of [360, 390, 1280]){ await page.setViewportSize({width:W, height:800}); await page.goto(url);
+    const m = await page.evaluate(() => { const T = [...document.querySelectorAll('button,a[href],[role=button],input,select')].filter(b => b.offsetParent && !b.closest('p,li,figcaption'));
+      return {sw: document.documentElement.scrollWidth, n: T.length, small: T.filter(b => b.getBoundingClientRect().height < 40).map(b => `"${b.textContent.trim().slice(0, 24)}" ${Math.round(b.getBoundingClientRect().height)}px`), minH: T.length ? Math.min(...T.map(b => b.getBoundingClientRect().height)) : null}; });
+    const bad = [m.sw > W && `sideways scroll ${m.sw}px`, ...m.small.map(x => `tap target ${x}`)].filter(Boolean); if (bad.length) lbad.push(`${W}px: ${bad.join('; ')}`);
+    console.log(`${bad.length ? 'BAD ' : 'ok  '} landing ${W}px wide: scrollWidth ${m.sw}, ${m.n} tap targets, smallest ${m.minH == null ? '-' : Math.round(m.minH) + 'px'}${bad.length ? ' -> ' + bad.join('; ') : ''}`); }
+  if (lbad.length) fail('landing layout: ' + lbad.join(' | '));
+  await page.setViewportSize({width:1280, height:900}); }
 const BANNED = /\b(bet|wager|stake|gamble|odds|jackpot|payout|casino)\b/i;
 const browser = await chromium.launch(); const page = await browser.newPage(); const errs = [];
 await scanLanding(process.env.LANDING_URL || base);   // landing = site root (or LANDING_URL); fails on unapproved names
 page.on('pageerror', e => errs.push(e.message)); page.on('console', m => m.type() === 'error' && errs.push(m.text()));
 const res = await page.goto(base + 'text/'); if (res.status() !== 200) fail('status ' + res.status());
 const shot = async () => { const out = await page.textContent('#out'), menu = await page.$$eval('#menu button', l => l.map(x => x.querySelector('.k').textContent.replace(/^\[(\d)\]$/, '$1)') + ' ' + x.querySelector('.l').textContent)), note = await page.textContent('#note');
-  const txt = out + '\n' + menu.join('\n') + '\n' + note + '\n' + await page.textContent('body'); checkNames(txt, page.url());
+  checkNames(await domText(), page.url());
   return {out, menu, note, all: out + '\n' + menu.map(m => '   ' + m).join('\n') + (note ? '\n   >> ' + note : '')}; };
 const idx = (s, re) => { const m = s.menu.find(x => re.test(x)); return m ? +m.match(/^(\d)\)/)[1] - 1 : -1; };   // returns the option's KEY - 1 (keys are fixed, not positions)
 const key = k => page.keyboard.press(k);
@@ -96,7 +106,10 @@ await key('1'); T = [];
 let r = await playOne('bot'); if (!r.sawGold || !r.sawCue) fail('golden turn/cue'); ok('gather turns + golden cue + golden race');
 if (!r.toast) fail('no blocked-move toast'); ok('toast: ' + r.toast);
 ok('duel to result vs Easy bot'); if (!(await page.evaluate(() => TXT.players[0].club))) fail('player club not crafted');  /* club shows on the card now, not in the duel text */ ok('club crafted at the workbench'); const transcript = T.join('\n');
-if (!/\[#+-*\]/.test(transcript)) fail('no HP bars'); ok('HP text bars');
+// HP must be visible on the ape CARDS (text + bar); text bars on the result screen are optional (Architect may drop the duplicate).
+for (const c of ['#me', '#op']){ const h = await page.evaluate(sel => { const e = document.querySelector(sel); return e && {txt: e.textContent, bar: !!e.querySelector('.hp i'), vis: !!e.offsetParent}; }, c);
+  if (!h || !h.vis || !/\d+\s*\/\s*\d+\s*HP/.test(h.txt) || !h.bar) fail(`HP not visible on ${c} card at the result: ${JSON.stringify(h)}`); }
+ok(`HP shown on both ape cards (text + bar)${/\[#+-*\]/.test(s.out) ? '; result screen also draws text HP bars' : '; result screen has no text HP bars (allowed)'}`);
 s = await shot(); await key(String(idx(s, /Rematch/) + 1)); s = await shot(); if (!/GATHER/i.test(s.out)) fail('rematch'); ok('rematch starts a new gather');
 // hot seat with Hard toggle check
 await page.goto(base + 'text/'); s = await shot(); await key(String(idx(s, /switch to Hard/) + 1)); s = await shot(); if (!/Bot level: HARD/.test(s.out)) fail('hard toggle'); ok('Easy/Hard toggle');
