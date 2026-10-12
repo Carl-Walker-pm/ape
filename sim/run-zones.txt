@@ -5,51 +5,51 @@ Ape stats from play/rules.js: vinny 110hp/12atk/3arm, boulder 82hp/15atk/3arm, z
 
 Balance (row ape win %, bots mixed random/habit/smart):
              vinny  boulder      zip      moe   tinker
-vinny            -    49.6%    51.4%    50.2%    48.3%
-boulder      50.4%        -    51.8%    49.3%    49.5%
-zip          48.6%    48.2%        -    47.4%    45.5%
-moe          49.8%    50.7%    52.6%        -    50.1%
-tinker       51.7%    50.5%    54.5%    49.9%        -
-Range 45.5%-54.5% -> PASS (45-55%)
+vinny            -    49.5%    50.6%    50.1%    49.0%
+boulder      50.5%        -    52.1%    49.1%    49.1%
+zip          49.4%    47.9%        -    46.2%    46.1%
+moe          49.9%    50.9%    53.8%        -    49.9%
+tinker       51.0%    50.9%    53.9%    50.1%        -
+Range 46.1%-53.9% -> PASS (45-55%)
 
 Skill test (mirror matches, 10000 per ape, sides alternate):
-  smart vs habit : 99.8%  (vinny 99.9%, boulder 99.6%, zip 99.9%, moe 99.9%, tinker 99.8%)
-  smart vs random: 88.4%  (vinny 89.6%, boulder 86.4%, zip 88.0%, moe 89.5%, tinker 88.6%)
+  smart vs habit : 99.9%  (vinny 99.9%, boulder 99.7%, zip 99.9%, moe 100.0%, tinker 99.9%)
+  smart vs random: 88.5%  (vinny 90.1%, boulder 86.3%, zip 87.9%, moe 89.8%, tinker 88.4%)
   habit vs random: 57.3%
 
 === 4 zones: head x1.2, chest x1, belly x1, legs x0.8; pick 1 hit + 2 adjacent blocks (head+chest, chest+belly, belly+legs; no wrap) ===
 
 Balance (row ape win %, bots mixed random/habit/smart):
              vinny  boulder      zip      moe   tinker
-vinny            -    48.5%    50.6%    48.2%    48.9%
-boulder      51.5%        -    51.5%    49.8%    49.1%
-zip          49.4%    48.5%        -    48.6%    46.9%
-moe          51.8%    50.2%    51.4%        -    49.6%
-tinker       51.1%    50.9%    53.1%    50.4%        -
-Range 46.9%-53.1% -> PASS (45-55%)
+vinny            -    48.7%    51.5%    47.4%    48.3%
+boulder      51.3%        -    51.0%    50.4%    49.8%
+zip          48.5%    49.0%        -    48.7%    47.2%
+moe          52.6%    49.6%    51.3%        -    49.4%
+tinker       51.7%    50.2%    52.8%    50.6%        -
+Range 47.2%-52.8% -> PASS (45-55%)
 
 Skill test (mirror matches, 10000 per ape, sides alternate):
-  smart vs habit : 99.8%  (vinny 99.9%, boulder 99.6%, zip 99.9%, moe 100.0%, tinker 99.8%)
-  smart vs random: 90.2%  (vinny 91.4%, boulder 88.4%, zip 89.7%, moe 91.7%, tinker 89.9%)
+  smart vs habit : 99.8%  (vinny 99.8%, boulder 99.6%, zip 99.8%, moe 99.9%, tinker 99.9%)
+  smart vs random: 90.2%  (vinny 91.5%, boulder 88.1%, zip 89.8%, moe 91.0%, tinker 90.4%)
   habit vs random: 53.3%
 
 === 5 zones + shield: head x1.2, chest x1, belly x1, waist x1, legs x0.8; pick 1 hit + 3 adjacent blocks (head+chest+belly, chest+belly+waist, belly+waist+legs; no wrap) ===
 
 Balance (row ape win %, bots mixed random/habit/smart):
              vinny  boulder      zip      moe   tinker
-vinny            -    48.6%    50.6%    48.3%    49.5%
-boulder      51.4%        -    51.9%    50.0%    49.4%
-zip          49.4%    48.1%        -    49.4%    48.6%
-moe          51.7%    50.0%    50.6%        -    49.0%
-tinker       50.5%    50.6%    51.4%    51.0%        -
-Range 48.1%-51.9% -> PASS (45-55%)
+vinny            -    48.6%    50.0%    48.0%    49.0%
+boulder      51.4%        -    52.3%    49.3%    50.0%
+zip          50.0%    47.7%        -    49.1%    47.2%
+moe          52.0%    50.7%    50.9%        -    50.1%
+tinker       51.0%    50.0%    52.8%    49.9%        -
+Range 47.2%-52.8% -> PASS (45-55%)
 
 Skill test (mirror matches, 10000 per ape, sides alternate):
-  smart vs habit : 99.9%  (vinny 99.9%, boulder 99.9%, zip 100.0%, moe 99.9%, tinker 99.9%)
-  smart vs random: 97.2%  (vinny 97.9%, boulder 95.9%, zip 97.1%, moe 97.9%, tinker 97.4%)
+  smart vs habit : 99.9%  (vinny 100.0%, boulder 99.9%, zip 100.0%, moe 100.0%, tinker 100.0%)
+  smart vs random: 97.1%  (vinny 97.7%, boulder 96.0%, zip 97.0%, moe 97.8%, tinker 97.1%)
   habit vs random: 53.0%
 
 SUMMARY
-5 zones: balance 45.5%-54.5% PASS; smart vs habit 99.8%, smart vs random 88.4%
-4 zones: balance 46.9%-53.1% PASS; smart vs habit 99.8%, smart vs random 90.2%
-5 zones + shield: balance 48.1%-51.9% PASS; smart vs habit 99.9%, smart vs random 97.2%
+5 zones: balance 46.1%-53.9% PASS; smart vs habit 99.9%, smart vs random 88.5%
+4 zones: balance 47.2%-52.8% PASS; smart vs habit 99.8%, smart vs random 90.2%
+5 zones + shield: balance 47.2%-52.8% PASS; smart vs habit 99.9%, smart vs random 97.1%

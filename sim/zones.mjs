@@ -9,47 +9,24 @@ const R = require(path.resolve(here, '../play/rules.js'));
 const a = process.argv.slice(2), arg = (k, d) => { const i = a.indexOf('--' + k); return i >= 0 ? a[i+1] : d; };
 const SEED = arg('seed', '42'), N = +arg('n', 10000), IDS = Object.keys(R.STATS);
 // Blocks are ADJACENT zones in body order, no wrap-around (legs+head is not a block: they are not neighbours on the body).
-const Z5 = {head:1.2, chest:1.0, belly:1.0, waist:1.0, legs:0.8};
+const ZC = require(path.resolve(here, 'zones-core.js'));   // shared with the text edition's zone preview
 const VARIANTS = {
-  '5 zones':          {M:Z5, k:2},
-  '4 zones':          {M:{head:1.2, chest:1.0, belly:1.0, legs:0.8}, k:2},   // waist dropped
-  '5 zones + shield': {M:Z5, k:3},                                          // fixed shield: both apes block 3 adjacent
+  '5 zones':          {M:ZC.Z5, k:2},
+  '4 zones':          {M:ZC.Z4, k:2},   // waist dropped
+  '5 zones + shield': {M:ZC.Z5, k:3},   // fixed shield: both apes block 3 adjacent
 };
-const LOADOUT = {fruit:3, club:true};      // same for every ape: fair start, isolates the duel
-const LOW = 0.4;                            // bots eat below 40% HP when they can
+const LOADOUT = {fruit:3, club:true};   // same for every ape: fair start, isolates the duel
 function rngFrom(str){ let h = 1779033703 ^ str.length; for (const c of str){ h = Math.imul(h ^ c.charCodeAt(0), 3432918353); h = h << 13 | h >>> 19; }
   let s = h >>> 0; return () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-let K = 2; const pairsOf = Z => Z.slice(0, Z.length - K + 1).map((_, i) => Z.slice(i, i + K));   // adjacent, no wrap
-const canEat = f => f.p.fruit > 0 && (f.eaten || 0) < R.MAX_EATS && f.hp < f.max;
 const pick = (rng, L) => L[Math.floor(rng() * L.length)];
-const argmax = (rng, L, score) => { let best = -Infinity, out = []; for (const x of L){ const v = score(x); if (v > best + 1e-9){ best = v; out = [x]; } else if (Math.abs(v - best) < 1e-9) out.push(x); } return pick(rng, out); };
-// ---- bots ----
-const BOTS = {
-  random(s, me, op, Z){ const eat = canEat(me) && s.rng() < 1 / (Z.length + 1); return {hit: eat ? null : pick(s.rng, Z), block: pick(s.rng, pairsOf(Z))}; },
-  habit(s, me, op, Z){                        // a favourite hit zone and block pair, used ~65% of the time
-    if (!s.fav){ s.fav = pick(s.rng, Z); s.favB = pick(s.rng, pairsOf(Z)); }
-    const eat = canEat(me) && me.hp < LOW * me.max;
-    return {hit: eat ? null : s.rng() < .65 ? s.fav : pick(s.rng, Z), block: s.rng() < .65 ? s.favB : pick(s.rng, pairsOf(Z))};
-  },
-  smart(s, me, op, Z, M){                     // reads the opponent's last 6 picks
-    const H = op.hits.slice(-6), B = op.blocks.slice(-6), w = i => 1 + i;   // newer picks count more
-    const hitP = z => H.reduce((t, h, i) => t + (h === z ? w(i) : 0), 0), blkP = z => B.reduce((t, b, i) => t + (b.includes(z) ? w(i) : 0), 0);
-    const tot = B.reduce((t, _, i) => t + w(i), 0) || 1;
-    const hit = argmax(s.rng, Z, z => M[z] * (1 - blkP(z) / tot) + 0.01 * s.rng());
-    const block = argmax(s.rng, pairsOf(Z), bl => bl.reduce((t, z) => t + hitP(z) * M[z], 0) + 0.01 * s.rng());
-    const eat = canEat(me) && me.hp < LOW * me.max && me.hp + R.EAT_HEAL <= me.max;
-    return {hit: eat ? null : hit, block};
-  },
-};
+const BOTS = {random:1, habit:1, smart:1};
+let K = 2; const pairsOf = Z => ZC.blocksFor(Z, K);
 function fighter(id){ const p = {ape:{id, name:id, ...R.STATS[id]}, fruit:LOADOUT.fruit, wood:0, club:LOADOUT.club}; return {p, hp:p.ape.hp, max:p.ape.hp, eaten:0, hits:[], blocks:[]}; }
 function duel(idA, idB, botA, botB, Z, M, rng){
-  const F = [fighter(idA), fighter(idB)], S = [{bot:botA, rng}, {bot:botB, rng}];
+  const F = [fighter(idA), fighter(idB)], S = [{rng}, {rng}], bots = [botA, botB];
   for (let r = 0; r < R.MAX_ROUNDS; r++){
-    const P = F.map((f, i) => BOTS[S[i].bot](S[i], f, F[1-i], Z, M));
-    const dmgTo = [0, 0];
-    P.forEach((p, i) => { if (p.hit && !P[1-i].block.includes(p.hit)) dmgTo[1-i] = Math.round(R.dmg(F[i].p, F[1-i].p) * M[p.hit]); });
-    P.forEach((p, i) => { const f = F[i]; if (!p.hit){ f.hp = Math.min(f.max, f.hp + R.EAT_HEAL); f.p.fruit--; f.eaten++; } });
-    F.forEach((f, i) => { f.hp -= dmgTo[i]; f.hits.push(P[i].hit); f.blocks.push(P[i].block); });
+    const P = F.map((f, i) => ZC.BOTS[bots[i]](R, S[i], f, F[1-i], M, K));
+    ZC.resolve(R, F, P, M);
     if (F[0].hp <= 0 || F[1].hp <= 0) return F[0].hp <= 0 && F[1].hp <= 0 ? .5 : F[1].hp <= 0 ? 1 : 0;
   }
   const ra = F[0].hp / F[0].max, rb = F[1].hp / F[1].max; return ra > rb ? 1 : rb > ra ? 0 : .5;

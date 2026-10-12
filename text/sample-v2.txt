@@ -1,0 +1,90 @@
+RULES SCREEN
+GOING APESH!T                              RULES (FROM RULES.JS)
+════════════════════════════════════════════════════════════════
+
+APES        HP   Strike  Armour  Strike dmg vs armour 3 (no club / club)
+Vinny      110      12       3   9 / 13
+Boulder     82      15       3   12 / 16
+Zip         97      13       3   10 / 14
+Big Moe    112      12       3   9 / 13
+Tinker     101      13       3   10 / 14
+
+Damage = Strike + club (4) - the other ape's armour, at least 1.
+
+WHO BEATS WHAT (worked example: Vinny vs Vinny, no clubs, base hit 9):
+  Strike    vs Feint    : deals 12, takes  0
+  Strike    vs Strike   : deals  9, takes  9
+  Guard     vs Strike   : deals  5, takes  0
+  Feint     vs Guard    : deals 14, takes  0
+  Feint     vs Eat fruit: deals 14, takes  0
+  Strike    vs Eat fruit: deals  9, takes  0
+  Feint     vs Strike   : deals  0, takes 12
+  Guard     vs Feint    : deals  0, takes 14
+  Guard     vs Guard    : deals  0, takes  0
+  Feint     vs Feint    : deals  0, takes  0
+
+Guard twice in a row: not allowed.
+Eat: heals 20 HP (not above max), costs 1 fruit, 3 per duel, the golden fruit gives a 4th; without the golden fruit a 4th Eat is not allowed.
+Club: 4 wood + 1 fruit (Tinker: 2 wood), +4 to every hit.
+Duel ends at 0 HP or after 30 rounds (then the higher HP share wins).
+
+
+READ LINE
+READ: Tinker has Struck 1 of the last 2 rounds.  (Played moves only, no guessing.)
+
+RESULT (4 moves)
+GOING APESH!T                                             RESULT
+════════════════════════════════════════════════════════════════
+
+   TINKER WINS THIS ONE
+
+ZIP        [--------------------]   0/97 HP
+           fruit 0, Eats left 4, club +4
+
+TINKER     [##------------------]   8/101 HP
+           fruit 2, Eats left 0, club +4
+
+Last round: Round 15: Zip STRIKE vs Tinker STRIKE. Zip strikes! Tinker strikes! Tinker takes 14. Zip takes 14.
+15 rounds.
+
+DECIDED BY: Round 15: Tinker Struck, Zip Struck, both landed: 14 dealt, 14 taken, and that knocked Zip out.
+
+REPLAY CODE: BEM35-242424212424241211111111111111
+  (your choices in order; ?replay=BEM35-242424212424241211111111111111 in the address bar plays it back)
+
+Rematches this session: 0
+
+
+ZONE GAME
+Round 1: Boulder HIT CHEST/block chest+belly vs Big Moe HIT HEAD/block waist+legs. Boulder hits the chest for 16. Big Moe hits the head for 16.
+Round 2: Boulder HIT BELLY/block belly+waist vs Big Moe HIT HEAD/block waist+legs. Boulder hits the belly for 16. Big Moe hits the head for 16.
+READ: Big Moe hit the head 2 of the last 2 rounds, blocked waist+legs 2 of 2.  (Played moves only.)
+Round 3: Boulder HIT WAIST/block waist+legs vs Big Moe HIT CHEST/block waist+legs. Boulder hits the waist, Big Moe blocks it. Big Moe hits the chest for 13.
+READ: Big Moe hit the head 2 of the last 3 rounds, blocked waist+legs 3 of 3.  (Played moves only.)
+Round 4: Boulder HIT LEGS/block head+chest vs Big Moe HIT HEAD/block waist+legs. Boulder hits the legs, Big Moe blocks it. Big Moe hits the head, Boulder blocks it.
+READ: Big Moe hit the head 3 of the last 4 rounds, blocked waist+legs 4 of 4.  (Played moves only.)
+Round 5: Boulder HIT HEAD/block chest+belly vs Big Moe HIT HEAD/block waist+legs. Boulder hits the head for 19. Big Moe hits the head for 16.
+Round 6: Boulder HIT CHEST/block belly+waist vs Big Moe HIT CHEST/block waist+legs. Boulder hits the chest for 16. Big Moe hits the chest for 13.
+READ: Big Moe hit the chest 2 of the last 4 rounds, blocked waist+legs 4 of 4.  (Played moves only.)
+
+ZONE RESULT
+GOING APESH!T                                             RESULT
+════════════════════════════════════════════════════════════════
+
+   BIG MOE WINS THIS ONE   [zone duel preview]
+
+BOULDER    [--------------------]   0/82 HP
+           fruit 0, Eats left 4, club +4
+
+BIG MOE    [#####---------------]  29/112 HP
+           fruit 7, Eats left 3, club +4
+
+Last round: Round 7: Boulder HIT BELLY/block waist+legs vs Big Moe HIT HEAD/block waist+legs. Boulder hits the belly for 16. Big Moe hits the head for 16.
+7 rounds.
+
+DECIDED BY: Round 7: Big Moe went for the head, Boulder went for the belly and blocked waist+legs, so the hit got through for 16 (Big Moe took 16), and that knocked Boulder out.
+
+REPLAY CODE: BEZ24-242424212424122334451122334
+  (your choices in order; ?replay=BEZ24-242424212424122334451122334 in the address bar plays it back)
+
+Rematches this session: 0

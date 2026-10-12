@@ -2,7 +2,7 @@
    Duels, crafting, stats: ../play/rules.js. Turn-based gathering: gather.js. No random calls. */
 'use strict';
 (() => {
-const R = window.ApeRules, TG = window.TextGather;
+const R = window.ApeRules, TG = window.TextGather, ZC = window.ZoneCore;
 const APES = [
   {id:'vinny',  name:'Vinny',   role:'the climber',   trick:'Only Vinny can climb the canopy (+3 fruit).'},
   {id:'boulder',name:'Boulder', role:'the smasher',   trick:'Chops 2 wood per tree.'},
@@ -14,7 +14,10 @@ const MOVES = {strike:'Strike', guard:'Guard', feint:'Feint', eat:'Eat fruit'};
 const HINT = {strike:'beats Feint', guard:'blocks a Strike and hits back; not twice in a row', feint:'beats Guard and Eat; loses to Strike', eat:`heals ${R.EAT_HEAL}, costs 1 fruit, ${R.MAX_EATS} per duel`};
 const SESSION = {rematches:0};
 const out = document.getElementById('out'), menu = document.getElementById('menu'), note = document.getElementById('note');
-const G = window.TXT = {mode:'bot', diff:'easy', picks:[], log:[]};
+const G = window.TXT = {mode:'bot', diff:'easy', picks:[], log:[], rec:null};
+const QS = new URLSearchParams(location.search);
+G.zones = QS.get('duel') === 'zones';                  // preview mode; the default stays the 4 moves
+const ZM = ZC.Z5, ZK = 2, ZN = Object.keys(ZM), ZB = ZC.blocksFor(ZN, ZK);
 const RULE = '═'.repeat(64), THIN = '─'.repeat(64);
 
 // ---- screen helpers ----
@@ -29,10 +32,13 @@ function screen(text, opts = [], enter = null){
     menu.appendChild(li);
   });
 }
-function pickChoice(i){ const o = choices[i]; if (!o) return; if (o.off){ note.textContent = o.why || 'Not possible now.'; return; } o.go(); }
+function pickChoice(i){ const o = choices[i]; if (!o) return; if (o.off){ note.textContent = o.why || 'Not possible now.'; return; }
+  if (G.rec && !o.nr) G.rec.push(String(i + 1)); o.go(); }
+function enter(){ if (!onEnter) return; if (G.rec) G.rec.push('.'); onEnter(); }
 addEventListener('keydown', e => {
   if (/^[1-9]$/.test(e.key)){ e.preventDefault(); pickChoice(+e.key - 1); }
-  else if ((e.key === 'Enter' || e.key === ' ') && onEnter && document.activeElement.tagName !== 'LI'){ e.preventDefault(); onEnter(); }
+  else if ((e.key === 'Enter' || e.key === ' ') && onEnter && document.activeElement.tagName !== 'LI'){ e.preventDefault(); enter(); }
+  else if (e.key === '?' && !G.inRules){ e.preventDefault(); rules(); }
 });
 const bar = (v, max, n = 20) => { const k = Math.max(0, Math.round(n * Math.max(0, v) / max)); return '[' + '#'.repeat(k) + '-'.repeat(n - k) + ']'; };
 const head = (title) => `GOING APESH!T${' '.repeat(Math.max(1, 64 - 13 - title.length))}${title}\n${RULE}\n`;
@@ -40,7 +46,7 @@ const pname = p => G.mode === 'hot' ? `${p.ape.name} (Player ${p.i+1})` : p.bot 
 
 // ================= title =================
 function title(){
-  screen(head('PROTOTYPE, TEXT EDITION') +
+  screen(head(G.zones ? 'Preview: zone duel (not decided)' : 'PROTOTYPE, TEXT EDITION') +
 `
    PICK YOUR APE, GRAB THE FRUIT, WIN THE DUEL.
 
@@ -48,12 +54,16 @@ function title(){
    then fight a turn-based duel. Both sides pick a move in
    secret, the moves are revealed together. No dice.
 
-${THIN}
+${G.zones ? `
+   PREVIEW: ZONE DUEL (NOT DECIDED). Each round: pick 1 zone to hit
+   and 2 neighbouring zones to block. No shield.
+` : ''}${THIN}
 Bot level: ${G.diff === 'easy' ? 'EASY' : 'HARD'}
 `, [
     {label:'Play vs bot', go:() => { G.mode = 'bot'; select(); }},
     {label:'2 players, one keyboard', go:() => { G.mode = 'hot'; select(); }},
     {label:`Bot level: switch to ${G.diff === 'easy' ? 'Hard' : 'Easy'}`, go:() => { G.diff = G.diff === 'easy' ? 'hard' : 'easy'; title(); }},
+    {label:'? Rules (numbers come straight from rules.js)', nr:true, go:rules},
   ]);
 }
 
@@ -79,6 +89,7 @@ function pick(k){
 
 // ================= gather (turn-based) =================
 function startGather(){
+  G.rec = []; G.recHead = `${G.mode === 'hot' ? 'H' : 'B'}${G.diff === 'easy' ? 'E' : 'H'}${G.zones ? 'Z' : 'M'}${G.picks[0] + 1}${G.picks[1] + 1}`;
   G.players.forEach(p => Object.assign(p, {fruit:0, wood:0, gold:false, club:false}));
   G.camps = G.players.map(() => TG.newCamp());
   G.turn = 1; G.log = []; G.botIdx = 0; G.cue = false;
@@ -144,16 +155,52 @@ function craft(i){
   ]);
 }
 
+// ================= rules screen (generated from rules.js by running its own functions) =================
+function probe(apeA, apeB, ma, mb, club){
+  const mk = (ape, i) => ({p:{ape, i, fruit:5, club, gold:false}, hp:ape.hp - 40, max:ape.hp, lastGuard:false});
+  const a = mk(apeA, 0), b = mk(apeB, 1), ha = a.hp, hb = b.hp; R.resolve(a, b, ma, mb);
+  return {toA: ha - a.hp + (a.healed || 0), toB: hb - b.hp + (b.healed || 0), healA: a.healed || 0};
+}
+function rulesText(){
+  const A = APES, ref = A[0];
+  let t = head('RULES (FROM RULES.JS)') + '\n';
+  t += 'APES        HP   Strike  Armour  Strike dmg vs armour ' + ref.dfn + ' (no club / club)\n';
+  A.forEach(a => { const p = {ape:a}, q = {ape:ref}; t += `${a.name.padEnd(10)} ${String(a.hp).padStart(3)}   ${String(a.atk).padStart(5)}   ${String(a.dfn).padStart(5)}   ${R.dmg({...p, club:false}, q)} / ${R.dmg({...p, club:true}, q)}\n`; });
+  t += `\nDamage = Strike + club (${R.CLUB.atk}) - the other ape's armour, at least 1.\n`;
+  const d = R.dmg({ape:ref, club:false}, {ape:ref}), P = (x, y) => probe(ref, ref, x, y, false);
+  t += `\nWHO BEATS WHAT (worked example: ${ref.name} vs ${ref.name}, no clubs, base hit ${d}):\n`;
+  for (const [x, y] of [['strike','feint'],['strike','strike'],['guard','strike'],['feint','guard'],['feint','eat'],['strike','eat'],['feint','strike'],['guard','feint'],['guard','guard'],['feint','feint']]){
+    const r = P(x, y);
+    t += `  ${MOVES[x].padEnd(9)} vs ${MOVES[y].padEnd(9)}: deals ${String(r.toB).padStart(2)}, takes ${String(r.toA).padStart(2)}\n`;
+  }
+  const g = {p:{fruit:5, gold:false}, hp:50, max:100, lastGuard:true}, e = {p:{fruit:5, gold:false}, hp:50, max:100, eaten:R.MAX_EATS};
+  t += `\nGuard twice in a row: ${R.legal(g).includes('guard') ? 'allowed' : 'not allowed'}.\n`;
+  t += `Eat: heals ${R.EAT_HEAL} HP (not above max), costs 1 fruit, ${R.MAX_EATS} per duel${R.legal({...e, p:{fruit:5, gold:true}}).includes('eat') ? ', the golden fruit gives a 4th' : ''}; without the golden fruit a ${R.MAX_EATS + 1}th Eat is ${R.legal(e).includes('eat') ? 'allowed' : 'not allowed'}.\n`;
+  t += `Club: ${R.CLUB.wood} wood + ${R.CLUB.fruit} fruit (Tinker: ${R.clubWood({ape:{id:'tinker'}})} wood), +${R.CLUB.atk} to every hit.\n`;
+  t += `Duel ends at 0 HP or after ${R.MAX_ROUNDS} rounds (then the higher HP share wins).\n`;
+  if (G.zones){
+    t += `\nZONE DUEL PREVIEW (sim/zones-core.js): hit 1 of ${ZN.map(z => `${z} x${ZM[z]}`).join(', ')};\nblock 2 neighbours: ${ZB.map(b => b.join('+')).join(', ')} (legs and head are not neighbours).\nA hit lands if its zone isn't blocked: base hit x zone. Eat = no hit, heal, still block.\n`;
+  }
+  return t;
+}
+function rules(){
+  const back = { screen: out.textContent, choices, onEnter };
+  G.inRules = true;
+  screen(rulesText(), [{label:'Back', nr:true, go:() => { G.inRules = false; out.textContent = back.screen; const c = back.choices, e = back.onEnter; screen(back.screen, c, e); }}]);
+}
+
 // ================= duel =================
+const PAST = {strike:'Struck', guard:'Guarded', feint:'Feinted', eat:'Eaten'};
 function duelStart(){
-  const f = p => ({p, max:p.ape.hp + (p.gold ? R.GOLD_HP : 0), hp:p.ape.hp + (p.gold ? R.GOLD_HP : 0), lastGuard:false});
-  G.duel = {f:G.players.map(f), round:1, hist:[], picks:[null, null], log:[], over:false};
+  const f = p => ({p, max:p.ape.hp + (p.gold ? R.GOLD_HP : 0), hp:p.ape.hp + (p.gold ? R.GOLD_HP : 0), lastGuard:false, mh:[], hits:[], blocks:[], eaten:0});
+  G.duel = {f:G.players.map(f), round:1, hist:[], picks:[null, null], log:[], recs:[], over:false, bot:{rng:() => 0}};
   if (G.mode === 'hot') return passScreen(0, 'THE DUEL BEGINS');
   duelScreen(0);
 }
+const eatsLeft = f => R.MAX_EATS + (f.p.gold ? 1 : 0) - (f.eaten || 0);
 function fighterLines(f){
   return `${f.p.ape.name.toUpperCase().padEnd(10)} ${bar(f.hp, f.max)} ${String(Math.max(0, f.hp)).padStart(3)}/${f.max} HP\n` +
-         `           fruit ${f.p.fruit}, Eats left ${R.MAX_EATS + (f.p.gold ? 1 : 0) - (f.eaten || 0)}, ${f.p.club ? `club +${R.CLUB.atk}` : 'no club'}${f.lastGuard ? ', guarded last round' : ''}`;
+         `           fruit ${f.p.fruit}, Eats left ${eatsLeft(f)}, ${f.p.club ? `club +${R.CLUB.atk}` : 'no club'}${!G.zones && f.lastGuard ? ', guarded last round' : ''}`;
 }
 function whyNot(f, m){
   if (m === 'guard' && f.lastGuard) return "Can't Guard twice in a row. Pick another move.";
@@ -164,12 +211,41 @@ function whyNot(f, m){
   }
   return 'Not allowed right now. Pick another move.';
 }
-function duelScreen(who){
-  const D = G.duel, me = D.f[who], L = R.legal(me);
-  let t = head(`THE DUEL, ROUND ${D.round}`) + '\n' + fighterLines(D.f[0]) + '\n\n' + fighterLines(D.f[1]) + '\n\n';
+// opponent read: ONLY what was actually played (from round 3)
+function readLine(op){
+  const D = G.duel; if (D.round < 3) return '';
+  const n = op.p.ape.name;
+  if (!G.zones){
+    const last = op.mh.slice(-4), c = {}; last.forEach(m => c[m] = (c[m] || 0) + 1);
+    const [m, k] = Object.entries(c).sort((x, y) => y[1] - x[1] || R.MOVE_KEYS.indexOf(x[0]) - R.MOVE_KEYS.indexOf(y[0]))[0];
+    const what = m === 'eat' ? 'Eaten' : PAST[m];
+    return `READ: ${n} has ${what} ${k} of the last ${last.length} rounds.${m === 'eat' ? '' : ''}  (Played moves only, no guessing.)\n`;
+  }
+  const H = op.hits.slice(-4), B = op.blocks.slice(-4).map(b => b.join('+'));
+  const top = L => { const c = {}; L.forEach(x => c[x] = (c[x] || 0) + 1); return Object.entries(c).sort((x, y) => y[1] - x[1])[0]; };
+  const hz = H.filter(Boolean), [h, hk] = hz.length ? top(hz) : [null, 0], [b, bk] = top(B);
+  return `READ: ${n} ${h ? `hit the ${h} ${hk} of the last ${H.length} rounds` : `ate in all of the last ${H.length} rounds`}, blocked ${b} ${bk} of ${B.length}.  (Played moves only.)\n`;
+}
+function duelScreen(who, step){
+  const D = G.duel, me = D.f[who], op = D.f[1 - who];
+  let t = head(`THE DUEL, ROUND ${D.round}${G.zones ? '  (ZONE PREVIEW)' : ''}`) + '\n' + fighterLines(D.f[0]) + '\n\n' + fighterLines(D.f[1]) + '\n\n';
   t += (D.log.slice(-5).join('\n') || 'Both apes pick in secret. The moves are revealed together.') + '\n\n';
-  t += G.mode === 'hot' ? `PLAYER ${who+1} (${me.p.ape.name}), pick in secret:` : 'Your move:';
-  screen(t, R.MOVE_KEYS.map(m => ({label:`${MOVES[m].padEnd(10)} ${L.includes(m) ? HINT[m] : '(blocked)'}`, off:!L.includes(m), why:whyNot(me, m), go:() => choose(who, m)})));
+  t += readLine(op) + (D.round >= 3 ? '\n' : '');
+  const who_ = G.mode === 'hot' ? `PLAYER ${who+1} (${me.p.ape.name}), ` : '';
+  const help = {label:'? Rules', nr:true, go:rules};
+  if (!G.zones){
+    const L = R.legal(me);
+    t += G.mode === 'hot' ? `${who_}pick in secret:` : 'Your move:';
+    return screen(t, R.MOVE_KEYS.map(m => ({label:`${MOVES[m].padEnd(10)} ${L.includes(m) ? HINT[m] : '(blocked)'}`, off:!L.includes(m), why:whyNot(me, m), go:() => choose(who, m)})).concat([help]));
+  }
+  if (!step){
+    t += `${who_}${G.mode === 'hot' ? 'in secret: ' : ''}where do you HIT? (step 1 of 2)`;
+    const ok = ZC.canEat(R, me);
+    return screen(t, ZN.map(z => ({label:`Hit the ${z.padEnd(6)} x${ZM[z]}  (${ZC.hitFor(R, me, op, z, ZM)} if it lands)`, go:() => duelScreen(who, {hit:z})}))
+      .concat([{label:`Eat fruit instead (+${R.EAT_HEAL} HP, no hit)`, off:!ok, why:whyNot(me, 'eat'), go:() => duelScreen(who, {hit:null})}, help]));
+  }
+  t += `${who_}${step.hit ? `hitting the ${step.hit}` : 'eating'}. Which two do you BLOCK? (step 2 of 2)`;
+  screen(t, ZB.map(b => ({label:`Block ${b.join(' + ')}`, go:() => choose(who, {hit:step.hit, block:b})})).concat([{label:'Back to step 1', go:() => duelScreen(who)}]));
 }
 function narrate(a, b, ma, mb, hpA, hpB){
   const said = (me, op, m, mo, dmgToOp) => {
@@ -180,24 +256,38 @@ function narrate(a, b, ma, mb, hpA, hpB){
     return `${n} eats a fruit (+${me.healed || 0} HP).`;
   };
   const lostA = hpA - a.hp + (a.healed || 0), lostB = hpB - b.hp + (b.healed || 0);
-  let s = `${said(a, b, ma, mb, lostB)} ${said(b, a, mb, ma, lostA)}`;
+  if (ma === mb && ma === 'feint') return `${a.p.ape.name} and ${b.p.ape.name} both feint. Nothing happens.`;
+  if (ma === mb && ma === 'guard') return 'Both apes guard. Nothing happens.';
   const hits = [];
   if (lostB > 0 && !(ma === 'guard' || ma === 'feint')) hits.push(`${b.p.ape.name} takes ${lostB}.`);
   if (lostA > 0 && !(mb === 'guard' || mb === 'feint')) hits.push(`${a.p.ape.name} takes ${lostA}.`);
-  if (ma === mb && ma === 'feint') return `${a.p.ape.name} and ${b.p.ape.name} both feint. Nothing happens.`;
-  if (ma === mb && ma === 'guard') return 'Both apes guard. Nothing happens.';
-  return (s + ' ' + hits.join(' ')).trim();
+  return (`${said(a, b, ma, mb, lostB)} ${said(b, a, mb, ma, lostA)} ` + hits.join(' ')).trim();
+}
+function zoneSay(f, op, p, info, oinfo){
+  const n = f.p.ape.name;
+  const hit = p.hit ? `${n} hits the ${p.hit}${info.landed ? ` for ${info.dmg}` : `, ${op.p.ape.name} blocks it`}.` : `${n} eats a fruit (+${info.healed} HP).`;
+  return `${hit}`;
 }
 function choose(who, m){
   const D = G.duel; if (D.over) return;
-  if (!R.legal(D.f[who]).includes(m)){ note.textContent = whyNot(D.f[who], m); return; }
+  if (!G.zones && !R.legal(D.f[who]).includes(m)){ note.textContent = whyNot(D.f[who], m); return; }
   D.picks[who] = m;
-  if (G.mode === 'bot') D.picks[1] = R.botPick(D.f[1], D.f[0], D.hist);
+  if (G.mode === 'bot') D.picks[1] = G.zones ? ZC.BOTS[G.diff === 'easy' ? 'pattern' : 'smart'](R, D.bot, D.f[1], D.f[0], ZM, ZK) : R.botPick(D.f[1], D.f[0], D.hist);
   if (D.picks[1] == null) return passScreen(1, 'PLAYER 1 HAS PICKED');
-  const [ma, mb] = D.picks, [a, b] = D.f, hpA = a.hp, hpB = b.hp;
-  D.hist.push(ma);
-  R.resolve(a, b, ma, mb);
-  D.log.push(`Round ${D.round}: ${a.p.ape.name} ${MOVES[ma].toUpperCase()} vs ${b.p.ape.name} ${MOVES[mb].toUpperCase()}. ` + narrate(a, b, ma, mb, hpA, hpB));
+  const [ma, mb] = D.picks, [a, b] = D.f, hpA = a.hp, hpB = b.hp, R0 = D.round;
+  let line, rec;
+  if (!G.zones){
+    D.hist.push(ma); a.healed = b.healed = 0;
+    R.resolve(a, b, ma, mb); a.mh.push(ma); b.mh.push(mb);
+    line = `Round ${R0}: ${a.p.ape.name} ${MOVES[ma].toUpperCase()} vs ${b.p.ape.name} ${MOVES[mb].toUpperCase()}. ` + narrate(a, b, ma, mb, hpA, hpB);
+    rec = {r:R0, m:[ma, mb], took:[hpA - a.hp + (a.healed || 0), hpB - b.hp + (b.healed || 0)], heal:[a.healed || 0, b.healed || 0]};
+  } else {
+    const info = ZC.resolve(R, D.f, [ma, mb], ZM);
+    const desc = p => p.hit ? `HIT ${p.hit.toUpperCase()}` : 'EAT', bl = p => p.block.join('+');
+    line = `Round ${R0}: ${a.p.ape.name} ${desc(ma)}/block ${bl(ma)} vs ${b.p.ape.name} ${desc(mb)}/block ${bl(mb)}. ${zoneSay(a, b, ma, info[0])} ${zoneSay(b, a, mb, info[1])}`;
+    rec = {r:R0, m:[ma, mb], took:[info[1].dmg, info[0].dmg], heal:[info[0].healed, info[1].healed], info};
+  }
+  D.log.push(line); D.recs.push(rec);
   D.picks = [null, null]; D.round++;
   if (a.hp <= 0 || b.hp <= 0 || D.round > R.MAX_ROUNDS){ D.over = true; return result(); }
   if (G.mode === 'hot') return passScreen(0, 'ROUND REVEALED', true);
@@ -212,21 +302,78 @@ function passScreen(to, why, reveal){
   G.passTo = to;
 }
 
-// ================= result =================
+// ================= decisive turn =================
+const you = i => G.mode === 'bot' && i === 0 ? 'you' : G.duel.f[i].p.ape.name;
+function clause(rec, w){            // what happened in this round, told from the side of ape w
+  const l = 1 - w, F = G.duel.f, dealt = rec.took[l], got = rec.took[w], ln = F[l].p.ape.name;
+  if (G.zones){
+    const [pw, pl] = [rec.m[w], rec.m[l]];
+    const act = p => p.hit ? `hit the ${p.hit}` : 'ate';
+    let s = `${you(w)} ${pw.hit ? `went for the ${pw.hit}` : 'ate a fruit'}, ${ln} ${pl.hit ? `went for the ${pl.hit}` : 'ate'} and blocked ${pl.block.join('+')}`;
+    s += pw.hit ? (dealt ? `, so the hit got through for ${dealt}` : `, so the hit was blocked`) : `, healing ${rec.heal[w]}`;
+    if (got) s += ` (${you(w)} took ${got})`;
+    return s; void act;
+  }
+  const [mw, ml] = [rec.m[w], rec.m[l]];
+  const v = m => m === 'eat' ? 'ate a fruit' : PAST[m];
+  let s = `${you(w)} ${v(mw)}, ${ln} ${v(ml)}, `;
+  if (mw === 'feint' && (ml === 'guard' || ml === 'eat')) s += `the feint got through for ${dealt}`;
+  else if (mw === 'strike' && ml === 'feint') s += `the strike caught the feint for ${dealt}`;
+  else if (mw === 'guard' && ml === 'strike') s += `the guard blocked it and hit back for ${dealt}`;
+  else if (mw === 'strike' && ml === 'eat') s += `the strike landed for ${dealt} through the snack`;
+  else if (mw === 'strike' && ml === 'strike') s += `both landed: ${dealt} dealt, ${got} taken`;
+  else if (mw === 'eat') s += `the fruit healed ${rec.heal[w]}${got ? ` and cost ${got} in damage` : ''}`;
+  else s += dealt ? `it landed for ${dealt}` : `nothing got through`;
+  return s;
+}
+function decisive(w){
+  const D = G.duel, recs = D.recs, last = recs[recs.length - 1], F = D.f;
+  if (w == null) return `Round ${last.r}: ${clause(last, 0)}. ${F[0].hp <= 0 && F[1].hp <= 0 ? 'Both apes went down in the same round: a draw.' : 'Nobody came out ahead.'}`;
+  const l = 1 - w, cap = s => s[0].toUpperCase() + s.slice(1);
+  if (F[l].hp <= 0) return `Round ${last.r}: ${clause(last, w)}, and that knocked ${F[l].p.ape.name} out.`;
+  // no knockout: the round with the biggest swing in the winner's favour
+  const swing = r => (r.took[l] - r.heal[l]) - (r.took[w] - r.heal[w]);
+  const best = recs.reduce((x, y) => swing(y) > swing(x) ? y : x);
+  return `Round ${best.r}: ${clause(best, w)}. That was the biggest swing before time ran out (${R.MAX_ROUNDS} rounds).`.replace(/^Round (\d+): (\w)/, (m, n, c) => `Round ${n}: ${c}`) .replace(/: you/, ': you').replace(/^(.)/, c => cap(c));
+}
+
+// ================= result + replay =================
+const sig = () => G.duel.f.map(f => f.hp).join('/') + '@' + (G.duel.round - 1);
+function codeStr(){ return G.recHead + '-' + G.rec.join(''); }
 function result(){
   const [a, b] = G.duel.f;
   let w = null;
   if (a.hp <= 0 && b.hp <= 0) w = null; else if (b.hp <= 0) w = 0; else if (a.hp <= 0) w = 1;
   else w = a.hp / a.max > b.hp / b.max ? 0 : b.hp / b.max > a.hp / a.max ? 1 : null;
+  const code = codeStr(); G.code = code; G.rec = null;
   const h = w == null ? 'A DRAW' : G.mode === 'bot' ? (w === 0 ? 'YOU WIN THE DUEL' : `${G.duel.f[w].p.ape.name.toUpperCase()} WINS THIS ONE`) : `${G.duel.f[w].p.ape.name.toUpperCase()} (PLAYER ${w+1}) WINS`;
-  let t = head('RESULT') + `\n   ${h}\n\n` + fighterLines(a) + '\n\n' + fighterLines(b) + '\n\n';
-  t += `Final round: ${G.duel.log[G.duel.log.length - 1]}\n${G.duel.round - 1} rounds.\n\nRematches this session: ${SESSION.rematches}\n`;
+  let t = head(G.replaying ? 'RESULT (REPLAYED FROM CODE)' : 'RESULT') + `\n   ${h}${G.zones ? '   [zone duel preview]' : ''}\n\n` + fighterLines(a) + '\n\n' + fighterLines(b) + '\n\n';
+  t += `Last round: ${G.duel.log[G.duel.log.length - 1]}\n${G.duel.round - 1} rounds.\n\n`;
+  t += `DECIDED BY: ${decisive(w)}\n\n`;
+  if (G.replaying){
+    const same = G.replaying.expect == null ? null : G.replaying.expect === sig();
+    t += `Replayed every choice from the code. ${same == null ? 'Same code, same game: run it again and you get this exact result.' : same ? 'IDENTICAL to the original game, HP for HP and round for round:\nthe bot and the rules have no hidden randomness.' : 'MISMATCH with the original game. Please report this code.'}\n\n`;
+  }
+  t += `REPLAY CODE: ${code}\n  (your choices in order; ?replay=${code} in the address bar plays it back)\n\nRematches this session: ${SESSION.rematches}\n`;
+  G.lastSig = sig(); G.replaying = null;
   screen(t, [
     {label:'Rematch', go:() => { SESSION.rematches++; startGather(); }},
     {label:'Change ape', go:select},
     {label:'Title', go:title},
+    {label:'Replay code: replay this game exactly', go:() => replay(code, G.lastSig)},
   ]);
 }
-G.session = SESSION;
-title();
+function replay(code, expect){
+  const m = /^([BH])([EH])([MZ])([1-5])([1-5])-([1-9.]*)$/.exec(String(code).trim());
+  if (!m) return screen(head('REPLAY') + `\nThat replay code doesn't look right:\n${code}\n`, [{label:'Title', go:title}]);
+  G.mode = m[1] === 'H' ? 'hot' : 'bot'; G.diff = m[2] === 'E' ? 'easy' : 'hard'; G.zones = m[3] === 'Z';
+  G.picks = [+m[4] - 1, +m[5] - 1];
+  G.players = G.picks.map((k, i) => ({ape:APES[k], i, bot: G.mode === 'bot' && i === 1}));
+  startGather();
+  G.replaying = {expect: expect == null ? null : expect};
+  for (const c of m[6]){ if (!G.rec) break; if (c === '.') enter(); else pickChoice(+c - 1); }
+  if (G.rec){ G.rec = null; G.replaying = null; screen(head('REPLAY') + '\nThe code ended before the duel was over.\n', [{label:'Title', go:title}]); }
+}
+G.session = SESSION; G.replay = replay;
+if (QS.get('replay')) replay(QS.get('replay')); else title();
 })();

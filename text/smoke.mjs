@@ -25,17 +25,25 @@ const shot = async () => { const out = await page.textContent('#out'), menu = aw
   return {out, menu, note, all: out + '\n' + menu.map(m => '   ' + m).join('\n') + (note ? '\n   >> ' + note : '')}; };
 const idx = (s, re) => s.menu.findIndex(m => re.test(m));
 const key = k => page.keyboard.press(k);
-let T = [], s;
+let T = [], s, reads = 0;
 async function playOne(label){
   let guardTried = false, n = 0, sawGold = false, sawCue = false, sawPass = false, toast = '';
   for (;;){
     if (++n > 400) fail('too many steps'); s = await shot(); T.push(s.all, '');
     if (BANNED.test(s.all)) fail('banned word: ' + s.all.match(BANNED)[0]);
     if (/ripening in the centre/.test(s.out)) sawCue = true;
+    if (/^READ: /m.test(s.out) && !/ZONE/.test(s.out)){ // the read line must match the moves actually played
+      const want = await page.evaluate(() => { const D = TXT.duel, op = D.f[TXT.mode === 'hot' ? 1 - (TXT.passTo ?? 0) : 1].mh.slice(-4), c = {}; op.forEach(m => c[m] = (c[m] || 0) + 1); return {n:op.length, c}; });
+      const m = s.out.match(/has (Struck|Guarded|Feinted|Eaten) (\d) of the last (\d) rounds/); if (!m) fail('read line format: ' + s.out);
+      const key = {Struck:'strike', Guarded:'guard', Feinted:'feint', Eaten:'eat'}[m[1]];
+      if (+m[3] !== want.n || want.c[key] !== +m[2] || Object.values(want.c).some(v => v > +m[2])) fail('read line wrong: ' + m[0] + ' vs ' + JSON.stringify(want)); reads++; }
+    if (/ZONE PREVIEW/.test(s.out) && /READ: /.test(s.out)) reads++;
     if (/RESULT/.test(s.out)) return {sawGold, sawCue, sawPass, toast};
     if (/PASS THE KEYBOARD/.test(s.out)){ sawPass = true; await key('Enter'); continue; }
     let i = idx(s, /Race for the golden/); if (i >= 0){ sawGold = true; await key(String(i+1)); continue; }
     if (/WORKBENCH/.test(s.out)){ await key('1'); const s2 = await shot(); if (s2.note){ T.push('   >> ' + s2.note, ''); await key('2'); } continue; }
+    i = idx(s, /Hit the head/); if (i >= 0){ const r = await page.evaluate(() => TXT.duel.round); await key(String((r % 5) + 1)); continue; }
+    i = idx(s, /Block head/); if (i >= 0){ const r = await page.evaluate(() => TXT.duel.round); await key(String((r % 4) + 1)); continue; }
     i = idx(s, /^\d\) Guard/);
     if (i >= 0){ // duel: guard twice to hit the blocked-move toast once, else strike
       if (!guardTried && /GUARD/.test(T.slice(-6).join('\n').split('Round').pop() || '')){ await key(String(i+1)); s = await shot(); if (/Can't Guard twice/.test(s.note)){ toast = s.note; guardTried = true; T.push('   >> ' + s.note, ''); } continue; }
@@ -62,4 +70,37 @@ r = await playOne('hot'); if (!r.sawPass) fail('no pass screen'); ok('hot-seat g
 s = await shot(); if (!/Rematches this session: 0/.test(s.out)) fail('session count'); ok('session rematch count shown');
 if (await page.$('canvas, img, svg')) fail('graphics element found'); ok('no canvas/img/svg in DOM');
 if (errs.length) fail('console errors: ' + errs.join(' | ')); ok('no console errors');
+
+// ---- new in v2 ----
+async function checkResult(label){
+  s = await shot(); const code = (s.out.match(/REPLAY CODE: (\S+)/) || [])[1]; if (!code) fail(label + ': no replay code');
+  const m = s.out.match(/DECIDED BY: Round (\d+): (.+)/); if (!m) fail(label + ': no decisive line');
+  const last = +s.out.match(/(\d+) rounds\./)[1], ko = /knocked .* out/.test(m[2]); if (ko && +m[1] !== last) fail('KO decisive round mismatch');
+  if (!s.out.includes('Last round: Round ' + last + ':')) fail('last-round text wrong');
+  ok(`${label}: decisive line "${m[0]}"`); return {code, out:s.out};
+}
+// rules screen, generated
+await page.goto(base + 'text/'); await key('?'); s = await shot();
+for (const [id, st] of Object.entries(R.STATS)) if (!new RegExp(`\\b${st.hp}\\b`).test(s.out)) fail('rules missing HP of ' + id);
+if (!/Guard twice in a row: not allowed/.test(s.out) || !s.out.includes(`heals ${R.EAT_HEAL} HP`)) fail('rules text'); ok('rules screen built from rules.js'); const rulesText = s.out;
+await key('1'); s = await shot(); if (!/Play vs bot/.test(s.all)) fail('rules back');
+// vs bot game: read line, decisive, replay
+await key('1'); await key('3'); T = []; reads = 0; await playOne('bot2'); if (!reads) fail('no read line'); ok(`opponent read line checked against played moves (${reads} screens)`);
+const r1 = await checkResult('4-move'); const readSample = (T.join('\n').match(/^READ: .*$/m) || [''])[0];
+s = await shot(); await key(String(idx(s, /Replay code/) + 1)); s = await shot(); if (!/IDENTICAL to the original game/.test(s.out)) fail('replay not identical'); ok('replay code: identical result');
+const hp = o => o.match(/\d+\/\d+ HP/g).join(' ');
+if (hp(s.out) !== hp(r1.out)) fail('replay HP differ');
+await page.goto(base + 'text/?replay=' + r1.code); s = await shot(); if (hp(s.out) !== hp(r1.out) || !/REPLAYED FROM CODE/.test(s.out)) fail('?replay URL'); ok('?replay= URL reproduces the game');
+// zone preview vs Easy and Hard, plus hot seat
+await page.goto(base + 'text/?duel=zones'); s = await shot(); if (!/Preview: zone duel \(not decided\)/.test(s.out)) fail('zone label'); ok('zone preview label');
+await key('1'); await key('2'); T = []; reads = 0; await playOne('zones-easy'); const rz = await checkResult('zones Easy'); const zoneT = T.join('\n');
+if (!/blocked \w+\+\w+ \d of \d/.test(zoneT)) fail('zone read line'); ok('zone read line');
+const bot = (await page.evaluate(() => TXT.duel.f[1].hits)).map(h => h || 'eat').slice(0, 6); if (bot.slice(0,3).join() !== bot.slice(3,6).join()) fail('easy zone bot not a pattern: ' + bot); ok('Easy zone bot repeats: ' + bot.slice(0,3).join(', '));
+s = await shot(); await key(String(idx(s, /Replay code/) + 1)); s = await shot(); if (!/IDENTICAL/.test(s.out)) fail('zone replay'); ok('zone replay identical');
+await page.goto(base + 'text/?duel=zones'); s = await shot(); await key(String(idx(s, /switch to Hard/) + 1)); await key('1'); await key('4'); await playOne('zones-hard'); await checkResult('zones Hard');
+await page.goto(base + 'text/?duel=zones'); await key('2'); await key('1'); await key('5'); await playOne('zones-hot'); await checkResult('zones hot-seat');
+// shared logic: the zone numbers on screen equal sim/zones-core.js
+const ZC = require(path.resolve(here, '../sim/zones-core.js')); if (ZC.blocksFor(Object.keys(ZC.Z5), 2).length !== 4) fail('zones core'); ok('zone core shared with sim (4 adjacent blocks, no wrap)');
+if (errs.length) fail('console errors: ' + errs.join(' | ')); ok('no console errors (v2)');
+if (tfile) fs.writeFileSync(tfile.replace('.txt', '-samples.txt'), ['RULES SCREEN', rulesText, '', 'READ LINE', readSample, '', 'RESULT (4 moves)', r1.out, '', 'ZONE GAME', zoneT.split('\n').filter(l => /^Round|^READ/.test(l)).filter((l, i, a) => a.indexOf(l) === i).join('\n'), '', 'ZONE RESULT', rz.out].join('\n'));
 if (tfile) fs.writeFileSync(tfile, transcript); await browser.close(); console.log('SMOKE PASS');
