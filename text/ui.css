@@ -26,7 +26,7 @@ body{margin:0;color:var(--text);font:15px/1.55 var(--ui);-webkit-font-smoothing:
 .card .tag{font:600 12px/1 var(--ui);letter-spacing:0;text-transform:none;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 8px;vertical-align:middle}
 .card .sub{font-size:14px;color:var(--muted);margin:2px 0 12px}
 .card.empty{opacity:.7}
-.bubble{font:14px var(--mono);margin:0 0 10px;padding:6px 10px;border-radius:10px;border:1px solid var(--line)}
+.bubble{font:14px var(--mono);margin:0 0 10px;padding:6px 10px;border-radius:10px;border:1px solid var(--line);max-width:100%;overflow-wrap:anywhere}
 .hp{height:8px;border-radius:999px;background:#0b1812;overflow:hidden}
 .hp i{display:block;height:100%;border-radius:inherit;background:var(--text);transition:width .18s ease-out}
 #op .hp i{background:var(--teal)}

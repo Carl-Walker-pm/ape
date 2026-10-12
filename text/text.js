@@ -71,7 +71,7 @@ function card(el, p, f, who){
   const h = document.createElement('h2'); h.textContent = p.ape.name;
   const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = G.mode === 'hot' ? `Player ${p.i + 1}` : p.bot ? 'Bot' : 'You'; h.append(' ', tag);
   const sub = document.createElement('div'); sub.className = 'sub'; sub.textContent = p.ape.role;
-  const bubble = document.createElement('div'); bubble.className = 'bubble'; bubble.hidden = true;   // voice lines: slot only, not wired yet
+  const bubble = document.createElement('div'); bubble.className = 'bubble'; const say = voiceFor(p); bubble.hidden = !say; if (say) bubble.textContent = say;   // voice line: only after a reveal
   const bar_ = document.createElement('div'); bar_.className = 'hp' + (hp / max < .35 ? ' low' : ''); bar_.setAttribute('role', 'meter');
   bar_.setAttribute('aria-valuenow', hp); bar_.setAttribute('aria-valuemin', 0); bar_.setAttribute('aria-valuemax', max); bar_.setAttribute('aria-label', 'HP');
   const fill = document.createElement('i'); fill.style.width = (100 * hp / max) + '%'; bar_.append(fill);
@@ -82,6 +82,33 @@ function card(el, p, f, who){
   const ed = row('Eats left', String(eats));
   if (f && p.gold && (f.eaten || 0) < base + 1){ const b = document.createElement('span'); b.className = 'gold'; b.textContent = '4th Eat'; ed.append(' ', b); }  // gold: only the golden fruit's 4th-Eat badge in the duel
   el.append(h, sub, bubble, bar_, n, dl);
+}
+// ---- voice lines (text-writing-guide.md): flavour only, shown after the reveal, picked by round number (odd = A, even = B), never random ----
+const VOICE = {
+  vinny:  {strike:['Look up. Too late.', 'Straight from the canopy!'], block:'Nice try. I see it all.', won:'Finders keepers, groundling.', lost:"Fine. I'll climb for more.", ko:"View's better from up here."},
+  boulder:{strike:['SMASH.', 'Hold still.'], block:'No.', won:'Mine.', lost:'Hmph.', ko:'Down. Stay down.'},
+  zip:    {strike:['Too slow!', 'Blink and you missed it!'], block:'Saw that a mile off!', won:"Zoom! Gold's mine!", lost:'Wait, what? Again!', ko:'Done already? Rematch!'},
+  moe:    {strike:['Here comes the big one.', 'Easy now... BOOM.'], block:'Like hitting a tree, pal.', won:'Shiny one? Thank you kindly.', lost:'Plenty more fruit out there.', ko:'Have a nap, little one.'},
+  tinker: {strike:['Calculated.', 'Leverage. Look it up.'], block:'Saw your pattern. Blocked.', won:'Gold acquired. As planned.', lost:'Noted. Adjusting the plan.', ko:"And that's how it's done."},
+};
+const sayLine = (p, l) => l ? `${p.ape.name}: "${l}"` : '';
+// beat for side i of a revealed round (classic duel only; zone rounds stay voiceless per the guide)
+function voiceBeat(rec, i, F){
+  const V = VOICE[F[i].p.ape.id]; if (!V) return null;
+  const dead = F.map(f => f.hp <= 0);
+  if (dead[0] && dead[1]) return null;                       // double KO: no voice lines at all
+  if (dead[1 - i]) return V.ko;
+  if (dead[i] || G.zones) return null;
+  const m = rec.m[i], mo = rec.m[1 - i];
+  if (m === 'strike' && mo !== 'guard') return V.strike[rec.r % 2 ? 0 : 1];
+  if (m === 'guard' && mo === 'strike') return V.block;
+  return null;
+}
+function voiceFor(p){
+  const D = G.duel;
+  if (D && D.f && D.f[0].p === G.players[0]){ const rec = D.recs[D.recs.length - 1]; if (!rec) return ''; const i = D.f.findIndex(f => f.p === p); return i < 0 ? '' : sayLine(p, voiceBeat(rec, i, D.f)); }
+  if (G.goldSay && G.turn === TG.GOLD_TURN + 1){ const i = G.players.indexOf(p); return i < 0 ? '' : G.goldSay[i] || ''; }   // shown once, right after the turn-8 reveal
+  return '';
 }
 // motion: only during the reveal, after both picks are in (hit jolt, block flash, KO dim/scale). Off with reduced motion (CSS).
 function fx(rec){
@@ -167,7 +194,7 @@ function startGather(){
   G.rec = []; G.recHead = `${G.mode === 'hot' ? 'H' : 'B'}${G.diff === 'easy' ? 'E' : 'H'}${G.zones ? 'Z' : 'M'}${G.picks[0] + 1}${G.picks[1] + 1}`;
   G.players.forEach(p => Object.assign(p, {fruit:0, wood:0, gold:false, club:false}));
   G.camps = G.players.map(() => TG.newCamp());
-  G.turn = 1; G.log = []; G.botIdx = 0; G.cue = false; G.duel = null;
+  G.turn = 1; G.log = []; G.botIdx = 0; G.cue = false; G.duel = null; G.goldSay = null;
   G.maxTurn = Math.max(...G.players.map(TG.turnsFor));
   gatherTurn(0);
 }
@@ -208,6 +235,7 @@ function resolveTurn(){
   if (G.turn === TG.GOLD_TURN){
     const w = TG.golden(G.players, acts.map(a => a === 'gold'), R.GOLD_FRUIT);
     const racers = G.players.filter((p, i) => acts[i] === 'gold');
+    G.goldSay = G.players.map((p, i) => acts[i] === 'gold' && VOICE[p.ape.id] ? sayLine(p, p === w ? VOICE[p.ape.id].won : VOICE[p.ape.id].lost) : '');
     lines.push(w ? `* ${w.ape.name} grabs the GOLDEN FRUIT: +${R.GOLD_FRUIT} fruit and a 4th Eat in the duel.`
       : racers.length ? '* Both apes reach the golden fruit together and it rolls away. Nobody gets it.' : '* Nobody goes for the golden fruit.');
   }
@@ -318,8 +346,9 @@ function readLine(op){
 }
 function duelScreen(who, step){
   const D = G.duel, me = D.f[who], op = D.f[1 - who];
-  let t = head(`THE DUEL, ROUND ${D.round}${G.zones ? '  (ZONE PREVIEW)' : ''}`) + '\n' + fighterLines(D.f[0]) + '\n\n' + fighterLines(D.f[1]) + '\n\n';
-  t += (D.log.slice(-5).join('\n') || 'Both apes pick in secret. The moves are revealed together.') + '\n\n';
+  // face-off: only the last reveal, the opponent read and the moves (HP, stats and the full history live on the cards and in the log)
+  let t = head(`THE DUEL, ROUND ${D.round}${G.zones ? '  (ZONE PREVIEW)' : ''}`) + '\n';
+  t += (D.log[D.log.length - 1] || 'Both apes pick in secret. The moves are revealed together.') + '\n\n';
   t += readLine(op) + (D.round >= 3 ? '\n' : '');
   const who_ = G.mode === 'hot' ? `PLAYER ${who+1} (${me.p.ape.name}), ` : '';
   const help = {label:'? Rules', nr:true, go:rules};
