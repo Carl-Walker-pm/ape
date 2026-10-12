@@ -120,7 +120,8 @@ function afterPick(who, action){
   // bot
   const b = G.players[1];
   if (b.bot) G.pending[1] = G.turn > TG.turnsFor(b) ? 'none'
-    : G.turn === TG.GOLD_TURN ? 'gold' : TG.botAction(b, G.camps[1], G.turn, R.clubWood(b), G.diff === 'easy', G.botIdx++);
+    : G.turn === TG.GOLD_TURN ? (G.diff === 'easy' && (b.fruit + G.players[0].fruit) % 2 === 1 ? 'rest' : 'gold') :   // Easy skips the race when both apes' fruit adds up odd: no randomness, replays match, testers see both outcomes
+    TG.botAction(b, G.camps[1], G.turn, R.clubWood(b), G.diff === 'easy', G.botIdx++);
   resolveTurn();
 }
 function resolveTurn(){

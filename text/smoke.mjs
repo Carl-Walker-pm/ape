@@ -99,6 +99,12 @@ const bot = (await page.evaluate(() => TXT.duel.f[1].hits)).map(h => h || 'eat')
 s = await shot(); await key(String(idx(s, /Replay code/) + 1)); s = await shot(); if (!/IDENTICAL/.test(s.out)) fail('zone replay'); ok('zone replay identical');
 await page.goto(base + 'text/?duel=zones'); s = await shot(); await key(String(idx(s, /switch to Hard/) + 1)); await key('1'); await key('4'); await playOne('zones-hard'); await checkResult('zones Hard');
 await page.goto(base + 'text/?duel=zones'); await key('2'); await key('1'); await key('5'); await playOne('zones-hot'); await checkResult('zones hot-seat');
+// Easy bot skips the golden race in some games (fruit-sum parity), Hard always races
+{ const seen = new Set();
+  for (const first of ['breath', 'bush']){ await page.goto(base + 'text/'); await key('1'); await key('5');   // 0 or 1 fruit by turn 8
+    for (let i = 0; i < 7; i++){ s = await shot(); await key(String(idx(s, new RegExp(i ? 'breath' : first, 'i')) + 1)); }
+    s = await shot(); await key(String(idx(s, /breath/i) + 1)); const l = (await page.evaluate(() => TXT.log)).find(x => /^Turn 8:/.test(x)); seen.add(/grabs/.test(l) ? 'races' : 'skips'); T.push(l); }
+  if (seen.size !== 2) fail('Easy golden race: only ' + [...seen] + ' | ' + T.slice(-2).join(' / ')); ok('Easy bot: races in one game, skips in another'); }
 // shared logic: the zone numbers on screen equal sim/zones-core.js
 const ZC = require(path.resolve(here, '../sim/zones-core.js')); if (ZC.blocksFor(Object.keys(ZC.Z5), 2).length !== 4) fail('zones core'); ok('zone core shared with sim (4 adjacent blocks, no wrap)');
 if (errs.length) fail('console errors: ' + errs.join(' | ')); ok('no console errors (v2)');
