@@ -21,9 +21,9 @@ function rngFrom(str){ let h = 1779033703 ^ str.length; for (const c of str){ h 
 const pick = (rng, L) => L[Math.floor(rng() * L.length)];
 const BOTS = {random:1, habit:1, smart:1};
 let K = 2; const pairsOf = Z => ZC.blocksFor(Z, K);
-function fighter(id){ const p = {ape:{id, name:id, ...R.STATS[id]}, fruit:LOADOUT.fruit, wood:0, club:LOADOUT.club}; return {p, hp:p.ape.hp, max:p.ape.hp, eaten:0, hits:[], blocks:[]}; }
-function duel(idA, idB, botA, botB, Z, M, rng){
-  const F = [fighter(idA), fighter(idB)], S = [{rng}, {rng}], bots = [botA, botB];
+function fighter(id, gold){ const p = {ape:{id, name:id, ...R.STATS[id]}, fruit:LOADOUT.fruit + (gold ? R.GOLD_FRUIT : 0), wood:0, club:LOADOUT.club, gold:!!gold}; /* golden fruit: +fruit and a 4th Eat (zones-core canEat) */ return {p, hp:p.ape.hp, max:p.ape.hp, eaten:0, hits:[], blocks:[]}; }
+function duel(idA, idB, botA, botB, Z, M, rng, gA, gB){
+  const F = [fighter(idA, gA), fighter(idB, gB)], S = [{rng}, {rng}], bots = [botA, botB];
   for (let r = 0; r < R.MAX_ROUNDS; r++){
     const P = F.map((f, i) => ZC.BOTS[bots[i]](R, S[i], f, F[1-i], M, K));
     ZC.resolve(R, F, P, M);
@@ -35,6 +35,7 @@ const pct = v => (v * 100).toFixed(1) + '%';
 console.log(`ZONE duel sim (sim only). Seed ${SEED}, ${N} duels per pair. Loadout for every ape: club + ${LOADOUT.fruit} fruit, Eat heals ${R.EAT_HEAL}, max ${R.MAX_EATS} Eats, ${R.MAX_ROUNDS} rounds then HP% decides.`);
 console.log('Ape stats from play/rules.js: ' + IDS.map(k => `${k} ${R.STATS[k].hp}hp/${R.STATS[k].atk}atk/${R.STATS[k].dfn}arm`).join(', '));
 const summary = [];
+if (a.includes('--gold')) goldRuns(); else
 for (const [vn, {M, k}] of Object.entries(VARIANTS)){
   const Z = Object.keys(M); K = k;
   console.log(`\n=== ${vn}: ${Z.map(z => `${z} x${M[z]}`).join(', ')}; pick 1 hit + ${k} adjacent blocks (${pairsOf(Z).map(b => b.join('+')).join(', ')}; no wrap) ===`);
@@ -66,4 +67,37 @@ for (const [vn, {M, k}] of Object.entries(VARIANTS)){
     console.log(`  habit vs random: ${pct(per.reduce((s, x) => s + x, 0) / per.length)}`); }
   summary.push(`${vn}: balance ${pct(lo)}-${pct(hi)} ${ok ? 'PASS' : 'FAIL'}; smart vs habit ${pct(sk.habit)}, smart vs random ${pct(sk.random)}`);
 }
-console.log('\nSUMMARY\n' + summary.join('\n'));
+if (summary.length) console.log('\nSUMMARY\n' + summary.join('\n'));
+
+// ---- golden fruit runs (--gold): the 4th Eat that zones-core allows with the golden fruit ----
+// "A gold": the row ape has the golden fruit (+1 fruit, 4th Eat), the column ape doesn't. "B gold": the column ape has it. "both": both do.
+function goldRuns(){
+  const out = [];
+  for (const vn of ['5 zones', '4 zones']){
+    const {M, k} = VARIANTS[vn], Z = Object.keys(M); K = k;
+    const play = (x, y, gx, gy, tag) => { const rng = rngFrom(`${SEED}:${vn}:gold-${tag}:${x}:${y}`); let w = 0;
+      for (let n = 0; n < N; n++){ const ba = pick(rng, Object.keys(BOTS)), bb = pick(rng, Object.keys(BOTS));
+        w += n % 2 ? 1 - duel(y, x, bb, ba, Z, M, rng, gy, gx) : duel(x, y, ba, bb, Z, M, rng, gx, gy); }
+      return w / N; };
+    const cases = {
+      'A gold': (r, c) => play(r, c, true, false, 'A'),
+      'B gold': (r, c) => play(r, c, false, true, 'B'),
+      'both gold': (r, c) => play(r, c, true, true, 'both'),
+    };
+    for (const [cn, f] of Object.entries(cases)){
+      console.log(`\n=== ${vn}, ${cn}: row ape win % (${cn === 'A gold' ? 'row ape has the golden fruit' : cn === 'B gold' ? 'column ape has the golden fruit' : 'both have it'}) ===`);
+      const rate = {};
+      for (const r of IDS) for (const c of IDS) if (r !== c){
+        if (cn === 'both gold' && rate[c+'>'+r] != null){ rate[r+'>'+c] = 1 - rate[c+'>'+r]; continue; }
+        rate[r+'>'+c] = f(r, c);
+      }
+      console.log(''.padEnd(9) + IDS.map(x => x.padStart(9)).join(''));
+      let ok = true;
+      for (const r of IDS) console.log(r.padEnd(9) + IDS.map(c => { if (r === c) return '-'.padStart(9); const v = rate[r+'>'+c], bad = v < .45 || v > .55; if (bad) ok = false; return (pct(v) + (bad ? '!' : '')).padStart(9); }).join(''));
+      const v = Object.values(rate), lo = Math.min(...v), hi = Math.max(...v);
+      console.log(`Range ${pct(lo)}-${pct(hi)} -> ${ok ? 'PASS' : 'FAIL'} (45-55%)`);
+      out.push(`${vn}, ${cn}: ${pct(lo)}-${pct(hi)} ${ok ? 'PASS' : 'FAIL'}`);
+    }
+  }
+  console.log('\nSUMMARY (golden fruit)\n' + out.join('\n'));
+}
