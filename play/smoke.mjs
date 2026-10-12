@@ -43,7 +43,7 @@ ok((await pg.textContent('#toast')).includes("Can't Guard twice in a row. Pick a
 await pg.keyboard.press('Digit2'); ok(await pg.isVisible('#toast'), 'rejected Guard (key) shows toast');
 ok((await pg.textContent('[data-m="guard"]')).includes('twice in a row'), 'blocked Guard is greyed out with its reason');
 let n=1; const seq=['strike','feint','strike','guard','strike','eat'];
-while (await pg.evaluate(()=>APE.screen)==='duel' && n<40){
+while (await pg.evaluate(()=>APE.screen==='duel' && !APE.duel.over) && n<40){
   const m = seq[n%seq.length]; const sel = `[data-m="${m}"]:not(.off)`;
   if (await pg.$(sel)) await pg.click(sel); else await pg.click('[data-m="strike"]');
   n++; if (n===3) await pg.screenshot({path:dir+'/shot-5-duel.png'});

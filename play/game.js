@@ -272,7 +272,7 @@ function whyNot(f, m){
   return 'Not allowed right now';
 }
 function choose(i, m){
-  const D = G.duel; if (G.screen!=='duel') return;
+  const D = G.duel; if (G.screen!=='duel' || D.over) return;
   if (!legal(D.f[i]).includes(m)){
     toast(`${whyNot(D.f[i], m)}. Pick another move.`);
     return;
@@ -286,7 +286,7 @@ function choose(i, m){
   D.final = D.log;
   D.last = [ma, mb]; D.anim = 0.6; D.picks = [null,null]; D.round++;
   const [fa,fb] = D.f;
-  if (fa.hp<=0 || fb.hp<=0 || D.round > MAX_ROUNDS) return setTimeout(result, 700);
+  if (fa.hp<=0 || fb.hp<=0 || D.round > MAX_ROUNDS){ D.over = true; ui.querySelectorAll('[data-m]').forEach(b => b.disabled = true); return setTimeout(result, 700); }
   if (G.mode==='hot') return passScreen(1, D.log);
   duelUI();
 }
