@@ -1,0 +1,25 @@
+Going ApeSh!t sim on the game's own rules (../mvp/rules.js), seed 42
+Ape HP: vinny 110, boulder 82, zip 97, moe 112, tinker 101
+
+=== Ape balance, slice with gathering + golden fruit (ROW win rate vs COLUMN), 1000 matches per pair, bots aggressive/defensive/gatherer/mixed
+             vinny  boulder      zip      moe   tinker
+vinny            -    52.2%    48.1%    54.3%    46.2%
+boulder      47.8%        -    48.4%    51.6%    51.0%
+zip          51.8%    51.6%        -    48.9%    46.5%
+moe          45.7%    48.4%    51.0%        -    53.8%
+tinker       53.8%    49.0%    53.5%    46.2%        -
+Range 45.7-54.3% -> PASS (45-55%)
+Gathering (plan bots): avg fruit at duel 14.85, club crafted 100%, golden fruit taken in 100% of matches
+
+=== Skill test: smart bot vs each opponent, 10000 matches each, seed 42 (random ape pairs, seats alternate)
+  smart vs random     97.7%  PASS (target >= 65%)
+  smart vs aggressive 97.8%  PASS (target >= 65%)
+  smart vs defensive  98.8%  PASS (target >= 65%)
+  smart vs gatherer   78.0%  PASS (target >= 65%)
+  smart vs mixed      98.0%  PASS (target >= 65%)  [extra]
+  smart vs habit      96.1%  PASS (target >= 65%)  [the in-game bot]
+
+=== Does fruit matter? Smart bot vs the heuristic-bot mix (both with a club; opponent has 6 fruit), 10000 duels each, same seed
+  smart with 0 fruit: 75.9%   3 fruit: 93.2%   6 fruit: 93.2%   6 fruit + golden fruit: 95.7%
+  same test with a 'mixed' heuristic bot instead of smart: 0 fruit 35.5%, 6 fruit 51.4%
+exit 0
