@@ -1,6 +1,6 @@
 RULES SCREEN
-GOING APESH!T                              RULES (FROM RULES.JS)
-════════════════════════════════════════════════════════════════
+RULES (FROM RULES.JS)
+═════════════════════
 
 APES        HP   Strike  Armour  Strike dmg vs armour 3 (no club / club)
 Vinny      110      12       3   9 / 13
@@ -38,8 +38,8 @@ READ LINE
 READ: Tinker has Struck 1 of the last 2 rounds.  (Played moves only, no guessing.)
 
 RESULT (4 moves)
-GOING APESH!T                                             RESULT
-════════════════════════════════════════════════════════════════
+RESULT
+══════
 
    TINKER WINS THIS ONE
 
@@ -54,8 +54,8 @@ Last round: Round 15: Zip STRIKE vs Tinker STRIKE. Zip strikes! Tinker strikes! 
 
 DECIDED BY: Round 15: Tinker Struck, Zip Struck, both landed: 14 dealt, 14 taken, and that knocked Zip out.
 
-REPLAY CODE: BEM35-212121292121211211111111111111
-  (your choices in order; ?replay=BEM35-212121292121211211111111111111 in the address bar plays it back)
+REPLAY CODE: T3-BEM35-212121292121211211111111111111
+  (your choices in order; ?replay=T3-BEM35-212121292121211211111111111111 in the address bar plays it back)
 
 Rematches this session: 0
 
@@ -73,8 +73,8 @@ Round 6: Boulder HIT CHEST/block belly+waist vs Big Moe HIT CHEST/block waist+le
 READ: Big Moe hit the chest 2 of the last 4 rounds, blocked waist+legs 4 of 4.  (Played moves only.)
 
 ZONE RESULT
-GOING APESH!T                                             RESULT
-════════════════════════════════════════════════════════════════
+RESULT
+══════
 
    BIG MOE WINS THIS ONE   [zone duel preview]
 
@@ -89,7 +89,7 @@ Last round: Round 7: Boulder HIT BELLY/block waist+legs vs Big Moe HIT HEAD/bloc
 
 DECIDED BY: Round 7: Big Moe went for the head, Boulder went for the belly and blocked waist+legs, so the hit got through for 16 (Big Moe took 16), and that knocked Boulder out.
 
-REPLAY CODE: BEZ24-212121292121122334451122334
-  (your choices in order; ?replay=BEZ24-212121292121122334451122334 in the address bar plays it back)
+REPLAY CODE: T3-BEZ24-212121292121122334451122334
+  (your choices in order; ?replay=T3-BEZ24-212121292121122334451122334 in the address bar plays it back)
 
 Rematches this session: 0

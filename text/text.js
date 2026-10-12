@@ -18,19 +18,93 @@ const G = window.TXT = {mode:'bot', diff:'easy', picks:[], log:[], rec:null};
 const QS = new URLSearchParams(location.search);
 G.zones = QS.get('duel') === 'zones';                  // preview mode; the default stays the 4 moves
 const ZM = ZC.Z5, ZK = 2, ZN = Object.keys(ZM), ZB = ZC.blocksFor(ZN, ZK);
-const RULE = '═'.repeat(64), THIN = '─'.repeat(64);
+const THIN = '─'.repeat(30);
 
 // ---- screen helpers ----
 let choices = [], onEnter = null;
-function screen(text, opts = [], enter = null){
-  out.textContent = text; choices = opts; onEnter = enter; note.textContent = '';
-  menu.innerHTML = '';
+let sel = null; const cap = z => z[0].toUpperCase() + z.slice(1);
+const confirmRow = document.getElementById('confirmRow'), confirmBtn = document.getElementById('confirm'), picked = document.getElementById('picked');
+// kind: 'list' (click acts at once) | 'moves' | 'hit' | 'block' (click selects, Confirm acts; number keys still act at once)
+function screen(text, opts = [], enter = null, kind = 'list'){
+  out.textContent = ''; text.split('\n').forEach((l, i, A) => { const sp = document.createElement('span'); sp.textContent = l + (i < A.length - 1 ? '\n' : '');
+    if (l.startsWith('!! Something golden')) sp.className = 'cue'; out.append(sp); });
+  choices = opts; onEnter = enter; note.textContent = ''; sel = null;
+  document.body.classList.toggle('passing', !opts.length && !!enter);   // pass screen: the board is hidden
+  menu.innerHTML = ''; menu.className = kind;
+  const selecting = kind !== 'list';
   opts.forEach((o, i) => {
-    const k = o.key || i + 1, li = document.createElement('li'); li.tabIndex = 0;
-    li.textContent = `${k}) ${o.label}`; if (o.off) li.className = 'off';
-    li.onclick = () => pickChoice(k - 1); li.onkeydown = e => { if (e.key === 'Enter') pickChoice(k - 1); };
-    menu.appendChild(li);
+    const k = o.key || i + 1, btn = document.createElement('button'); btn.type = 'button';
+    btn.innerHTML = ''; const kk = document.createElement('span'); kk.className = 'k'; kk.textContent = `[${k}]`;
+    const lb = document.createElement('span'); lb.className = 'l'; lb.textContent = o.label;
+    btn.append(kk, ' ', lb);
+    if (o.hint){ const h = document.createElement('span'); h.className = 'h'; h.textContent = o.hint; btn.append(h); }
+    if (o.zone) btn.dataset.z = o.zone;
+    if (o.cls) btn.classList.add(o.cls);
+    if (o.off){ btn.setAttribute('aria-disabled', 'true'); btn.title = o.why || ''; }
+    const direct = !selecting || o.nr || o.now;
+    if (direct && selecting) btn.classList.add('util');
+    btn.onclick = () => {
+      if (direct || o.off) return pickChoice(k - 1);
+      sel = k - 1; [...menu.children].forEach(c => c.setAttribute('aria-pressed', c === btn ? 'true' : 'false'));
+      confirmBtn.disabled = false; picked.textContent = 'Selected: ' + o.label.trim();
+    };
+    menu.appendChild(btn);
   });
+  if (kind === 'hit' || kind === 'block'){        // body chart: the other half of the pick shown beside the buttons (text only, no pick of the opponent)
+    const g = document.createElement('div'); g.className = 'ghost'; g.setAttribute('aria-hidden', 'true');
+    const t = document.createElement('div'); t.className = 'gt'; t.textContent = kind === 'hit' ? 'Then BLOCK two' : 'Your HIT'; g.append(t);
+    (kind === 'hit' ? ZB.map(b => b.map(cap).join(' + ')) : ZN.map(z => (G.zstep && G.zstep.hit === z ? '▶ ' : '') + cap(z))).forEach(x => { const d = document.createElement('div'); d.className = 'gz' + (x.startsWith('▶') ? ' on' : ''); d.textContent = x; g.append(d); });
+    if (kind === 'block' && G.zstep && !G.zstep.hit){ const d = document.createElement('div'); d.className = 'gz on'; d.textContent = '▶ Eat'; g.append(d); }
+    menu.appendChild(g);
+  }
+  confirmRow.hidden = !selecting; confirmBtn.disabled = true; picked.textContent = selecting ? 'Pick a button, then Confirm (or press its number key).' : '';
+  frame();
+}
+confirmBtn.onclick = () => { if (sel != null) pickChoice(sel); };
+// ---- the frame: header counter, ape cards, log, round reveal (all words, CSS only) ----
+const $ = id => document.getElementById(id);
+function card(el, p, f, who){
+  el.innerHTML = '';
+  if (!p){ el.className = 'card empty'; const h = document.createElement('h2'); h.textContent = who; const s2 = document.createElement('div'); s2.className = 'sub'; s2.textContent = 'No ape picked yet.'; el.append(h, s2); return; }
+  const hp = f ? Math.max(0, f.hp) : p.ape.hp, max = f ? f.max : p.ape.hp, base = R.MAX_EATS, eats = f ? eatsLeft(f) : base + (p.gold ? 1 : 0);
+  el.className = 'card';
+  const h = document.createElement('h2'); h.textContent = p.ape.name;
+  const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = G.mode === 'hot' ? `Player ${p.i + 1}` : p.bot ? 'Bot' : 'You'; h.append(' ', tag);
+  const sub = document.createElement('div'); sub.className = 'sub'; sub.textContent = p.ape.role;
+  const bubble = document.createElement('div'); bubble.className = 'bubble'; bubble.hidden = true;   // voice lines: slot only, not wired yet
+  const bar_ = document.createElement('div'); bar_.className = 'hp' + (hp / max < .35 ? ' low' : ''); bar_.setAttribute('role', 'meter');
+  bar_.setAttribute('aria-valuenow', hp); bar_.setAttribute('aria-valuemin', 0); bar_.setAttribute('aria-valuemax', max); bar_.setAttribute('aria-label', 'HP');
+  const fill = document.createElement('i'); fill.style.width = (100 * hp / max) + '%'; bar_.append(fill);
+  const n = document.createElement('div'); n.className = 'hpn'; n.textContent = `${hp} / ${max} HP`;
+  const dl = document.createElement('dl');
+  const row = (k, v) => { const dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = k; if (v instanceof Node) dd.append(v); else dd.textContent = v; dl.append(dt, dd); return dd; };
+  row('Fruit', p.fruit ?? 0); row('Wood', p.wood ?? 0); row('Club', p.club ? `+${R.CLUB.atk}` : 'none');
+  const ed = row('Eats left', String(eats));
+  if (f && p.gold && (f.eaten || 0) < base + 1){ const b = document.createElement('span'); b.className = 'gold'; b.textContent = '4th Eat'; ed.append(' ', b); }  // gold: only the golden fruit's 4th-Eat badge in the duel
+  el.append(h, sub, bubble, bar_, n, dl);
+}
+// motion: only during the reveal, after both picks are in (hit jolt, block flash, KO dim/scale). Off with reduced motion (CSS).
+function fx(rec){
+  if (!rec) return; const els = [$('me'), $('op')];
+  const blocked = i => G.zones ? rec.m[1-i].hit && rec.m[i].block.includes(rec.m[1-i].hit) : rec.m[i] === 'guard' && rec.m[1-i] === 'strike';
+  els.forEach((el, i) => { el.classList.remove('jolt', 'flash'); void el.offsetWidth;
+    if (rec.took[i] > 0) el.classList.add('jolt'); else if (blocked(i)) el.classList.add('flash'); });
+  const D = G.duel; if (D && D.over){ D.f.forEach((f, i) => { if (f.hp <= 0) els[i].classList.add('ko'); else if (D.f[1-i].hp <= 0) els[i].classList.add('win'); }); }
+}
+function frame(){
+  const D = G.duel && G.duel.f && G.players && G.duel.f[0].p === G.players[0] ? G.duel : null, inGather = G.turn && G.turn <= G.maxTurn && !D && G.rec;
+  card($('me'), G.players && G.picks.length >= 1 && G.players[0], D && D.f[0], G.mode === 'hot' ? 'Player 1' : 'You');
+  card($('op'), G.players && G.picks.length >= 2 && G.players[1], D && D.f[1], G.mode === 'hot' ? 'Player 2' : 'Opponent');
+  $('where').textContent = D ? (G.zones ? 'Zone duel (preview)' : 'The duel') : inGather ? 'Gathering in the grove' : G.rec ? 'Workbench' : G.zones ? 'Preview: zone duel (not decided)' : 'Text edition';
+  $('counter').textContent = D ? `Round ${Math.min(D.round, R.MAX_ROUNDS)} / ${R.MAX_ROUNDS}` : inGather ? `Turn ${G.turn} / ${G.maxTurn}` : '';
+  const lines = D ? D.log : (G.log || []);
+  const log = $('log'); log.innerHTML = '';
+  lines.slice().reverse().forEach((l, i) => { const li = document.createElement('li'); li.textContent = l; li.className = (i === 0 ? 'new' : '') + (/grabs the GOLDEN FRUIT/.test(l) ? ' goldline' : ''); log.append(li); });
+  if (!lines.length){ const li = document.createElement('li'); li.textContent = 'Nothing yet.'; log.append(li); }
+  log.scrollTop = 0;
+  const rv = $('reveal'), last = D && D.log[D.log.length - 1];
+  rv.hidden = !last; if (last){ rv.innerHTML = '<small>Round revealed</small>'; rv.append(last); }
+  if (G.fxPending && !document.body.classList.contains('passing')){ const r = G.fxPending; G.fxPending = null; fx(r); }
 }
 function pickChoice(i){ const o = choices.find((c, j) => (c.key || j + 1) === i + 1); if (!o) return; if (o.off){ note.textContent = o.why || 'Not possible now.'; return; }
   if (G.rec && !o.nr) G.rec.push(String(i + 1)); o.go(); }
@@ -41,11 +115,12 @@ addEventListener('keydown', e => {
   else if (e.key === '?' && !G.inRules){ e.preventDefault(); rules(); }
 });
 const bar = (v, max, n = 20) => { const k = Math.max(0, Math.round(n * Math.max(0, v) / max)); return '[' + '#'.repeat(k) + '-'.repeat(n - k) + ']'; };
-const head = (title) => `GOING APESH!T${' '.repeat(Math.max(1, 64 - 13 - title.length))}${title}\n${RULE}\n`;
+const head = (title) => `${title}\n${'═'.repeat(Math.min(30, title.length))}\n`;
 const pname = p => G.mode === 'hot' ? `${p.ape.name} (Player ${p.i+1})` : p.bot ? `${p.ape.name} (bot)` : p.ape.name;
 
 // ================= title =================
 function title(){
+  G.picks = []; G.duel = null; G.log = []; G.rec = null; G.turn = 0;
   screen(head(G.zones ? 'Preview: zone duel (not decided)' : 'PROTOTYPE, TEXT EDITION') +
 `
    PICK YOUR APE, GRAB THE FRUIT, WIN THE DUEL.
@@ -92,7 +167,7 @@ function startGather(){
   G.rec = []; G.recHead = `${G.mode === 'hot' ? 'H' : 'B'}${G.diff === 'easy' ? 'E' : 'H'}${G.zones ? 'Z' : 'M'}${G.picks[0] + 1}${G.picks[1] + 1}`;
   G.players.forEach(p => Object.assign(p, {fruit:0, wood:0, gold:false, club:false}));
   G.camps = G.players.map(() => TG.newCamp());
-  G.turn = 1; G.log = []; G.botIdx = 0; G.cue = false;
+  G.turn = 1; G.log = []; G.botIdx = 0; G.cue = false; G.duel = null;
   G.maxTurn = Math.max(...G.players.map(TG.turnsFor));
   gatherTurn(0);
 }
@@ -113,7 +188,7 @@ function gatherTurn(who){
   const opts = TG.actions(p, camp, G.turn).filter(a => a.id !== 'canopy' || p.ape.id === 'vinny')
     .map(a => ({key:KEY[a.id], label:a.label.replace(', Vinny only', ''), off:!a.ok, why: TG.why(p, camp, G.turn, a.id), go:() => afterPick(who, a.id)}));
   opts.push({key:5, label:'Finish gathering now', go:() => { G.turn = 999; endGather(); }});
-  if (G.turn === TG.GOLD_TURN) opts.push({key:9, label:'Race for the golden fruit', go:() => afterPick(who, 'gold')});
+  if (G.turn === TG.GOLD_TURN) opts.push({key:9, cls:'gold', label:'Race for the golden fruit', go:() => afterPick(who, 'gold')});
   screen(t, opts);
 }
 function afterPick(who, action){
@@ -251,16 +326,17 @@ function duelScreen(who, step){
   if (!G.zones){
     const L = R.legal(me);
     t += G.mode === 'hot' ? `${who_}pick in secret:` : 'Your move:';
-    return screen(t, R.MOVE_KEYS.map(m => ({label: L.includes(m) ? `${MOVES[m].padEnd(10)} ${HINT[m]}` : `${MOVES[m]} (${short(me, m)})`, off:!L.includes(m), why:whyNot(me, m), go:() => choose(who, m)})).concat([help]));
+    return screen(t, R.MOVE_KEYS.map(m => ({label: L.includes(m) ? MOVES[m] : `${MOVES[m]} (${short(me, m)})`, hint: L.includes(m) ? HINT[m] : '', off:!L.includes(m), why:whyNot(me, m), go:() => choose(who, m)})).concat([help]), null, 'moves');
   }
   if (!step){
     t += `${G.mode === 'hot' ? `PLAYER ${who+1} (${me.p.ape.name}), in secret.\n` : ''}Where do you HIT? (step 1 of 2)`;
     const ok = ZC.canEat(R, me);
-    return screen(t, ZN.map(z => ({label:`Hit the ${z.padEnd(6)} x${ZM[z]}  (${ZC.hitFor(R, me, op, z, ZM)} if it lands)`, go:() => duelScreen(who, {hit:z})}))
-      .concat([{label: ok ? `Eat fruit instead (+${R.EAT_HEAL} HP, no hit)` : `Eat fruit (${short(me, 'eat')})`, off:!ok, why:whyNot(me, 'eat'), go:() => duelScreen(who, {hit:null})}, help]));
+    return screen(t, ZN.map(z => ({zone:z, label:`Hit the ${z}`, hint:`x${ZM[z]} · ${ZC.hitFor(R, me, op, z, ZM)} if it lands`, go:() => duelScreen(who, {hit:z})}))
+      .concat([{label: ok ? `Eat fruit instead (+${R.EAT_HEAL} HP, no hit)` : `Eat fruit (${short(me, 'eat')})`, off:!ok, why:whyNot(me, 'eat'), go:() => duelScreen(who, {hit:null})}, help]), null, 'hit');
   }
+  G.zstep = step;
   t += `${G.mode === 'hot' ? `PLAYER ${who+1} (${me.p.ape.name}), in secret.\n` : ''}${step.hit ? `Hitting the ${step.hit}` : 'Eating'}. Which two do you BLOCK? (step 2 of 2)`;
-  screen(t, ZB.map(b => ({label:`Block ${b.join(' + ')}`, go:() => choose(who, {hit:step.hit, block:b})})).concat([{label:'Back to step 1', go:() => duelScreen(who)}]));
+  screen(t, ZB.map(b => ({label:`Block ${b.join(' + ')}`, go:() => choose(who, {hit:step.hit, block:b})})).concat([{label:'Back to step 1', now:true, go:() => duelScreen(who)}]), null, 'block');
 }
 function narrate(a, b, ma, mb, hpA, hpB){
   const said = (me, op, m, mo, dmgToOp) => {
@@ -304,6 +380,7 @@ function choose(who, m){
   }
   D.log.push(line); D.recs.push(rec);
   D.picks = [null, null]; D.round++;
+  G.fxPending = rec;
   if (a.hp <= 0 || b.hp <= 0 || D.round > R.MAX_ROUNDS){ D.over = true; return result(); }
   if (G.mode === 'hot') return passScreen(0, 'ROUND REVEALED', true);
   duelScreen(0);
@@ -354,7 +431,8 @@ function decisive(w){
 
 // ================= result + replay =================
 const sig = () => G.duel.f.map(f => f.hp).join('/') + '@' + (G.duel.round - 1);
-function codeStr(){ return G.recHead + '-' + G.rec.join(''); }
+const CODE_VERSION = 'T3';   // bump when choice keys or rules change; older codes are refused with a clear message
+function codeStr(){ return CODE_VERSION + '-' + G.recHead + '-' + G.rec.join(''); }
 function result(){
   const [a, b] = G.duel.f;
   let w = null;
@@ -379,7 +457,9 @@ function result(){
   ]);
 }
 function replay(code, expect){
-  const m = /^([BH])([EH])([MZ])([1-5])([1-5])-([1-9.]*)$/.exec(String(code).trim());
+  const raw = String(code).trim(), vm = /^(T\d+)-/.exec(raw);
+  if (!vm || vm[1] !== CODE_VERSION) return screen(head('REPLAY') + `\nMade with an older version of the game.\nThis code (${vm ? vm[1] : 'no version'}) can't be replayed by this version (${CODE_VERSION}).\n\n${raw}\n`, [{label:'Title', go:title}]);
+  const m = /^T\d+-([BH])([EH])([MZ])([1-5])([1-5])-([1-9.]*)$/.exec(raw);
   if (!m) return screen(head('REPLAY') + `\nThat replay code doesn't look right:\n${code}\n`, [{label:'Title', go:title}]);
   G.mode = m[1] === 'H' ? 'hot' : 'bot'; G.diff = m[2] === 'E' ? 'easy' : 'hard'; G.zones = m[3] === 'Z';
   G.picks = [+m[4] - 1, +m[5] - 1];

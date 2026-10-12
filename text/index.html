@@ -3,24 +3,22 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Going ApeSh!t: text edition (prototype)</title>
 <meta name="robots" content="noindex">
-<style>
-html{background:#f3efe4}
-body{margin:0 auto;max-width:76ch;padding:24px 16px 60px;color:#111;font:16px/1.45 "Courier New",Courier,ui-monospace,monospace}
-#out{white-space:pre-wrap;margin:0}
-#menu{margin:14px 0 0;padding:0;list-style:none}
-#menu li{cursor:pointer;padding:1px 0;white-space:pre-wrap}
-#menu li:hover,#menu li:focus{background:#111;color:#f3efe4;outline:none}
-#menu li.off{color:#888;cursor:not-allowed}
-#menu li.off:hover{background:none;color:#888}
-#note{min-height:1.45em;margin-top:10px;font-weight:bold}
-footer{margin-top:28px;border-top:1px solid #111;padding-top:6px;font-size:13px}
-a{color:#111}
-</style>
+<link rel="stylesheet" href="ui.css">
 </head><body>
-<pre id="out" aria-live="polite"></pre>
-<ul id="menu"></ul>
-<div id="note" role="alert"></div>
-<footer>Prototype v0, text edition. Same rules as the duel prototype (<a href="../play/rules.js">rules.js</a>). No dice, no random rolls. <a href="../">Back to the site</a></footer>
+<div id="app">
+  <header id="bar"><span id="brand">GOING APESH!T</span><span id="where"></span><span id="counter" aria-live="polite"></span></header>
+  <aside id="me" class="card" aria-label="Your ape"></aside>
+  <main id="centre" class="panel">
+    <div id="reveal" hidden></div>
+    <pre id="out" aria-live="polite"></pre>
+    <div id="menu" role="group" aria-label="Choices"></div>
+    <div id="confirmRow" hidden><button id="confirm" type="button" disabled>Confirm</button><span id="picked"></span></div>
+    <div id="note" role="alert"></div>
+  </main>
+  <aside id="op" class="card" aria-label="Opponent"></aside>
+  <section id="logbox" class="panel" aria-label="Log"><div class="ptitle">LOG</div><ol id="log"></ol></section>
+  <footer>Prototype v0, text edition. Same rules as the duel prototype (<a href="../play/rules.js">rules.js</a>). No dice, no random rolls. <a href="../">Back to the site</a></footer>
+</div>
 <script src="../play/rules.js"></script>
 <script src="../sim/zones-core.js"></script>
 <script src="gather.js"></script>
