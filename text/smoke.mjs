@@ -26,11 +26,14 @@ if (!base) { const http = await import('node:http'), root = path.resolve(here, '
   await new Promise(r => srv.listen(0, '127.0.0.1', r)); srv.unref(); base = `http://127.0.0.1:${srv.address().port}/`; console.log('serving this checkout at ' + base); }
 process.on('unhandledRejection', e => fail('error: ' + (e && e.message || e)));
 const { chromium } = require('/workspace/pw/node_modules/playwright');
+// Ape names not yet approved by Carl must not appear on any screen (add names here as needed).
+const UNAPPROVED = /\b(Moe)\b/;
 const BANNED = /\b(bet|wager|stake|gamble|odds|jackpot|payout|casino)\b/i;
 const browser = await chromium.launch(); const page = await browser.newPage(); const errs = [];
 page.on('pageerror', e => errs.push(e.message)); page.on('console', m => m.type() === 'error' && errs.push(m.text()));
 const res = await page.goto(base + 'text/'); if (res.status() !== 200) fail('status ' + res.status());
 const shot = async () => { const out = await page.textContent('#out'), menu = await page.$$eval('#menu button', l => l.map(x => x.querySelector('.k').textContent.replace(/^\[(\d)\]$/, '$1)') + ' ' + x.querySelector('.l').textContent)), note = await page.textContent('#note');
+  const txt = out + '\n' + menu.join('\n') + '\n' + note + '\n' + await page.textContent('body'); if (UNAPPROVED.test(txt)) fail('unapproved name on screen: ' + txt.match(UNAPPROVED)[0]);
   return {out, menu, note, all: out + '\n' + menu.map(m => '   ' + m).join('\n') + (note ? '\n   >> ' + note : '')}; };
 const idx = (s, re) => { const m = s.menu.find(x => re.test(x)); return m ? +m.match(/^(\d)\)/)[1] - 1 : -1; };   // returns the option's KEY - 1 (keys are fixed, not positions)
 const key = k => page.keyboard.press(k);
@@ -159,7 +162,7 @@ const w = await page.$eval('#me .hp i', e => e.style.width); if (!/%$/.test(w)) 
 await page.goto(base + 'text/?duel=zones'); await key('1'); await key('1'); await key('5'); await key('2');
 if ((await page.$$eval('#menu.hit button[data-z]', l => l.map(b => b.dataset.z).join())) !== 'head,chest,belly,waist,legs') fail('zone body chart');
 await page.click('#menu button[data-z=chest]'); await page.click('#confirm'); if ((await page.$$eval('#menu.block button', l => l.length)) !== 5) fail('block pair buttons'); ok('zones: HIT body chart + BLOCK pair buttons with Confirm');
-for (const W of [360, 390]){ await page.setViewportSize({width:W, height:800}); await page.goto(base + 'text/'); await key('1'); await key('1'); await key('5'); await key('2');
+for (const W of [360, 390, 1280]){ await page.setViewportSize({width:W, height:800}); await page.goto(base + 'text/'); await key('1'); await key('1'); await key('5'); await key('2');
   const m = await page.evaluate(() => ({sw: document.documentElement.scrollWidth, minH: Math.min(...[...document.querySelectorAll('#menu button,#confirm')].filter(b => b.offsetParent).map(b => b.getBoundingClientRect().height))}));
   if (m.sw > W) fail(`horizontal overflow at ${W}px: ${m.sw}`); if (m.minH < 40) fail(`tap target too small at ${W}px: ${m.minH}`); ok(`${W}px wide: no sideways scroll, smallest tap target ${Math.round(m.minH)}px`); }
 await page.setViewportSize({width:1280, height:900});
