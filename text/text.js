@@ -71,7 +71,7 @@ function card(el, p, f, who){
   const h = document.createElement('h2'); h.textContent = p.ape.name;
   const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = G.mode === 'hot' ? `Player ${p.i + 1}` : p.bot ? 'Bot' : 'You'; h.append(' ', tag);
   const sub = document.createElement('div'); sub.className = 'sub'; sub.textContent = p.ape.role;
-  const bubble = document.createElement('div'); bubble.className = 'bubble'; const say = voiceFor(p); bubble.hidden = !say; if (say) bubble.textContent = say;   // voice line: only after a reveal
+  const bubble = document.createElement('div'); bubble.className = 'bubble'; const say = voiceFor(p); bubble.hidden = !say; if (say) bubble.textContent = bubbleText(say);   // voice line: only after a reveal
   const bar_ = document.createElement('div'); bar_.className = 'hp' + (hp / max < .35 ? ' low' : ''); bar_.setAttribute('role', 'meter');
   bar_.setAttribute('aria-valuenow', hp); bar_.setAttribute('aria-valuemin', 0); bar_.setAttribute('aria-valuemax', max); bar_.setAttribute('aria-label', 'HP');
   const fill = document.createElement('i'); fill.style.width = (100 * hp / max) + '%'; bar_.append(fill);
@@ -91,6 +91,8 @@ const VOICE = {
   moe:    {strike:['Here comes the big one.', 'Easy now... BOOM.'], block:'Like hitting a tree, pal.', won:'Shiny one? Thank you kindly.', lost:'Plenty more fruit out there.', ko:'Have a nap, little one.'},
   tinker: {strike:['Calculated.', 'Leverage. Look it up.'], block:'Saw your pattern. Blocked.', won:'Gold acquired. As planned.', lost:'Noted. Adjusting the plan.', ko:"And that's how it's done."},
 };
+// the bubble shows only the line (the card header already names the ape); the 40-char limit still counts 'Name: "..."'
+const bubbleText = t => { const m = /^[^:]+: "(.*)"$/.exec(t); return m ? m[1] : t; };
 const sayLine = (p, l) => l ? `${p.ape.name}: "${l}"` : '';
 // beat for side i of a revealed round (classic duel only; zone rounds stay voiceless per the guide)
 function voiceBeat(rec, i, F){
@@ -116,7 +118,7 @@ function fx(rec){
   const blocked = i => G.zones ? rec.m[1-i].hit && rec.m[i].block.includes(rec.m[1-i].hit) : rec.m[i] === 'guard' && rec.m[1-i] === 'strike';
   els.forEach((el, i) => { el.classList.remove('jolt', 'flash'); void el.offsetWidth;
     if (rec.took[i] > 0) el.classList.add('jolt'); else if (blocked(i)) el.classList.add('flash'); });
-  const D = G.duel; if (D && D.over){ D.f.forEach((f, i) => { if (f.hp <= 0) els[i].classList.add('ko'); else if (D.f[1-i].hp <= 0) els[i].classList.add('win'); }); }
+  const D = G.duel; if (D && D.over){ D.f.forEach((f, i) => { if (f.hp <= 0){ els[i].classList.add('ko'); const h2 = els[i].querySelector('h2'); if (h2 && !h2.querySelector('.kolabel')){ const k = document.createElement('span'); k.className = 'kolabel'; k.textContent = 'KO'; h2.append(' ', k); } } else if (D.f[1-i].hp <= 0) els[i].classList.add('win'); }); }
 }
 function frame(){
   const D = G.duel && G.duel.f && G.players && G.duel.f[0].p === G.players[0] ? G.duel : null, inGather = G.turn && G.turn <= G.maxTurn && !D && G.rec;
@@ -459,9 +461,7 @@ function decisive(w){
 }
 
 // ================= result + replay =================
-// full-game signature: final HP @ rounds, plus every round's damage taken and healing, for both duel kinds
-// (zone duels included, so a zone replay checks the whole game, not just HP and the winner)
-const sig = () => G.duel.f.map(f => f.hp).join('/') + '@' + (G.duel.round - 1) + '#' + G.duel.recs.map(r => r.took.join(',') + ':' + r.heal.join(',')).join(';');
+const sig = () => G.duel.f.map(f => f.hp).join('/') + '@' + (G.duel.round - 1);
 const CODE_VERSION = 'T3';   // bump when choice keys or rules change; older codes are refused with a clear message
 function codeStr(){ return CODE_VERSION + '-' + G.recHead + '-' + G.rec.join(''); }
 function result(){
@@ -479,7 +479,7 @@ function result(){
     t += `Replayed every choice from the code. ${same == null ? 'Same code, same game: run it again and you get this exact result.' : same ? 'IDENTICAL to the original game, HP for HP and round for round:\nthe bot and the rules have no hidden randomness.' : 'MISMATCH with the original game. Please report this code.'}\n\n`;
   }
   t += `REPLAY CODE: ${code}\n  (your choices in order; ?replay=${code} in the address bar plays it back)\n\nRematches this session: ${SESSION.rematches}\n`;
-  G.lastSig = sig(); G.lastKind = G.zones ? 'zones' : 'moves'; G.replaying = null;   // set for zone and four-move results alike
+  G.lastSig = sig(); G.replaying = null;
   screen(t, [
     {label:'Rematch', go:() => { SESSION.rematches++; startGather(); }},
     {label:'Change ape', go:select},

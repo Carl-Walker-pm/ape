@@ -38,7 +38,8 @@ body{margin:0;color:var(--text);font:15px/1.55 var(--ui);-webkit-font-smoothing:
 /* motion: meaning only (style sheet table) */
 .card.jolt{animation:jolt .18s ease-out}
 .card.flash{animation:flash .2s ease-out}
-.card.ko{opacity:.4}
+.card.ko{opacity:1}   /* knocked out: full-contrast text plus a KO label, no fade */
+.kolabel{display:inline-block;font:700 12px var(--mono);padding:1px 7px;border-radius:6px;background:#f2f2f2;color:#111;letter-spacing:.06em;vertical-align:middle}
 .card.win h2{transform:scale(1.05)}
 @keyframes jolt{25%{transform:translateX(4px)}75%{transform:translateX(-4px)}}
 @keyframes flash{0%,100%{border-color:var(--line)}40%{border-color:#fff}}
