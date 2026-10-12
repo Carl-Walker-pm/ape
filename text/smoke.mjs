@@ -1,6 +1,8 @@
 // Smoke test for the TEXT edition. Node part: rules + gather run headless in node, deterministic.
 // Browser part (headless chromium): plays vs bot and a hot-seat game with keys only, checks toasts, pass screen, rematch,
-// no <canvas>/<img>, no console errors, no banned words. Usage: node text/smoke.mjs [baseURL] [transcript.txt]
+// no <canvas>/<img>, no console errors, no banned words, unapproved ape names (landing: fail; game: warn).
+// Usage: node text/smoke.mjs [baseURL] [transcript.txt] [--names-strict]   (no URL: serves this checkout; LANDING_URL=... overrides the landing page)
+// Before /text/ is published: run with --names-strict (or NAMES_APPROVED=0) unless Carl has approved the ape names.
 import { createRequire } from 'module'; import fs from 'fs'; import path from 'path'; import { fileURLToPath } from 'url';
 const here = path.dirname(fileURLToPath(import.meta.url)), require = createRequire(import.meta.url);
 const R = require(path.resolve(here, '../play/rules.js')), TG = require(path.resolve(here, 'gather.js'));
@@ -19,21 +21,39 @@ const src = ['text.js','gather.js','index.html'].map(f => fs.readFileSync(path.j
 if (/Math\.random|localStorage|<canvas|<img|getContext/.test(src)) fail('random/storage/graphics in source'); ok('node: no Math.random, storage, canvas or images');
 // ---- browser ----
 // No URL given: serve this checkout locally on a free port (so the test never hits whatever runs on :8765).
-let base = process.argv[2], tfile = process.argv[3];
+const POS = process.argv.slice(2).filter(x => !x.startsWith('--'));
+let base = POS[0], tfile = POS[1];
 if (!base) { const http = await import('node:http'), root = path.resolve(here, '..'), MIME = {'.html':'text/html', '.js':'text/javascript', '.css':'text/css'};
   const srv = http.createServer((q, r) => { const p = path.join(root, decodeURIComponent(new URL(q.url, 'http://x').pathname)), f = p.endsWith('/') ? p + 'index.html' : p;
     if (!f.startsWith(root) || !fs.existsSync(f)) { r.writeHead(404); return r.end(); } r.writeHead(200, {'content-type': MIME[path.extname(f)] || 'application/octet-stream'}); fs.createReadStream(f).pipe(r); });
   await new Promise(r => srv.listen(0, '127.0.0.1', r)); srv.unref(); base = `http://127.0.0.1:${srv.address().port}/`; console.log('serving this checkout at ' + base); }
 process.on('unhandledRejection', e => fail('error: ' + (e && e.message || e)));
 const { chromium } = require('/workspace/pw/node_modules/playwright');
-// Ape names not yet approved by Carl must not appear on any screen (add names here as needed).
-const UNAPPROVED = /\b(Moe)\b/;
+// Ape names not yet approved by Carl. Mode depends on the page PATH:
+//  - landing pages (anything not under /text/): FAIL, incl. screenshot alt text, captions and titles.
+//  - inside the game (/text/): WARN only, unless strict: --names-strict, NAMES_STRICT=1 or NAMES_APPROVED=0.
+// /text/ MUST be tested strict before it is published, unless Carl has approved the names.
+const UNAPPROVED = /\b(Moe|Vinny|Zip|Boulder|Tinker)\b/g;
+const NAMES_STRICT = process.argv.includes('--names-strict') || process.env.NAMES_STRICT === '1' || process.env.NAMES_APPROVED === '0';
+const nameWarned = new Set();
+function checkNames(txt, url){
+  const found = [...new Set(txt.match(UNAPPROVED) || [])]; if (!found.length) return;
+  const game = new URL(url).pathname.includes('/text/'), where = game ? 'game (/text/)' : 'landing page';
+  if (!game || NAMES_STRICT) fail(`unapproved name on ${where}: ${found.join(', ')}${game ? ' [strict]' : ''}`);
+  const fresh = found.filter(n => !nameWarned.has(n)); fresh.forEach(n => nameWarned.add(n));
+  if (fresh.length) console.log(`WARN unapproved name in ${where}: ${fresh.join(', ')} (warning only; use --names-strict before publishing /text/)`);
+}
+async function scanLanding(url){
+  await page.goto(url); const t = await page.evaluate(() => [document.title, document.body.innerText,
+    ...[...document.querySelectorAll('img[alt],[aria-label],[title],figcaption,meta[name=description],meta[property^="og:"]')].map(e => [e.alt, e.getAttribute('aria-label'), e.title, e.tagName === 'FIGCAPTION' ? e.textContent : '', e.content].filter(Boolean).join(' '))].join('\n'));
+  checkNames(t, page.url()); ok('landing page: no unapproved ape names (incl. alt/captions)'); }
 const BANNED = /\b(bet|wager|stake|gamble|odds|jackpot|payout|casino)\b/i;
 const browser = await chromium.launch(); const page = await browser.newPage(); const errs = [];
+await scanLanding(process.env.LANDING_URL || base);   // landing = site root (or LANDING_URL); fails on unapproved names
 page.on('pageerror', e => errs.push(e.message)); page.on('console', m => m.type() === 'error' && errs.push(m.text()));
 const res = await page.goto(base + 'text/'); if (res.status() !== 200) fail('status ' + res.status());
 const shot = async () => { const out = await page.textContent('#out'), menu = await page.$$eval('#menu button', l => l.map(x => x.querySelector('.k').textContent.replace(/^\[(\d)\]$/, '$1)') + ' ' + x.querySelector('.l').textContent)), note = await page.textContent('#note');
-  const txt = out + '\n' + menu.join('\n') + '\n' + note + '\n' + await page.textContent('body'); if (UNAPPROVED.test(txt)) fail('unapproved name on screen: ' + txt.match(UNAPPROVED)[0]);
+  const txt = out + '\n' + menu.join('\n') + '\n' + note + '\n' + await page.textContent('body'); checkNames(txt, page.url());
   return {out, menu, note, all: out + '\n' + menu.map(m => '   ' + m).join('\n') + (note ? '\n   >> ' + note : '')}; };
 const idx = (s, re) => { const m = s.menu.find(x => re.test(x)); return m ? +m.match(/^(\d)\)/)[1] - 1 : -1; };   // returns the option's KEY - 1 (keys are fixed, not positions)
 const key = k => page.keyboard.press(k);

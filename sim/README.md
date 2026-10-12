@@ -40,3 +40,6 @@ CI: `.github/workflows/balance.yml` runs it on any push/PR touching `play/rules.
 
 ### Replay guard (`replay_guard.mjs`)
 Replays the codes in `replay-fixtures.json` (3 text duels, 2 zone duels) headlessly with the game's own `text/` code and fails if final HP, rounds or winner change. Fixtures are keyed on the replay-code version (`CODE_VERSION` in `text/text.js`, currently `T3`): same version + different outcome fails; a bumped version marks them stale (reported; `--strict-version` fails). If a change is meant to alter outcomes: `node sim/replay_guard.mjs --regen`. Needs Playwright (`/workspace/pw` or `PLAYWRIGHT_PATH`). Runs inside `balance_check.mjs` (skip with `--no-replay`).
+
+## Smoke test name check (`text/smoke.mjs`)
+Unapproved ape names (Moe, Vinny, Zip, Boulder, Tinker) FAIL on landing pages (text, image alt, captions, titles) and only WARN inside `/text/`. **Before `/text/` is published, run it strict** (`node text/smoke.mjs --names-strict`, or `NAMES_APPROVED=0`) unless Carl has approved the names. Works on the local checkout (no URL) or a deployed site (`node text/smoke.mjs https://.../`); landing vs game is decided by the page path.
