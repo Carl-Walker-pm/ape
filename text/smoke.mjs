@@ -23,9 +23,9 @@ page.on('pageerror', e => errs.push(e.message)); page.on('console', m => m.type(
 const res = await page.goto(base + 'text/'); if (res.status() !== 200) fail('status ' + res.status());
 const shot = async () => { const out = await page.textContent('#out'), menu = await page.$$eval('#menu li', l => l.map(x => x.textContent)), note = await page.textContent('#note');
   return {out, menu, note, all: out + '\n' + menu.map(m => '   ' + m).join('\n') + (note ? '\n   >> ' + note : '')}; };
-const idx = (s, re) => s.menu.findIndex(m => re.test(m));
+const idx = (s, re) => { const m = s.menu.find(x => re.test(x)); return m ? +m.match(/^(\d)\)/)[1] - 1 : -1; };   // returns the option's KEY - 1 (keys are fixed, not positions)
 const key = k => page.keyboard.press(k);
-let T = [], s, reads = 0;
+let T = [], s, reads = 0, passHint = false;
 async function playOne(label){
   let guardTried = false, n = 0, sawGold = false, sawCue = false, sawPass = false, toast = '';
   for (;;){
@@ -39,7 +39,10 @@ async function playOne(label){
       if (+m[3] !== want.n || want.c[key] !== +m[2] || Object.values(want.c).some(v => v > +m[2])) fail('read line wrong: ' + m[0] + ' vs ' + JSON.stringify(want)); reads++; }
     if (/ZONE PREVIEW/.test(s.out) && /READ: /.test(s.out)) reads++;
     if (/RESULT/.test(s.out)) return {sawGold, sawCue, sawPass, toast};
-    if (/PASS THE KEYBOARD/.test(s.out)){ sawPass = true; await key('Enter'); continue; }
+    if (/PASS THE KEYBOARD/.test(s.out)){ sawPass = true;
+      if (!/Press ENTER to continue/.test(s.out)) fail('pass screen wording');
+      if (!passHint){ await key('3'); const s2 = await shot(); if (s2.note !== 'Press ENTER to continue.' || !/PASS THE KEYBOARD/.test(s2.out)) fail('pass screen number-key hint: ' + s2.note); passHint = true; }
+      await key('Enter'); continue; }
     let i = idx(s, /Race for the golden/); if (i >= 0){ sawGold = true; await key(String(i+1)); continue; }
     if (/WORKBENCH/.test(s.out)){ await key('1'); const s2 = await shot(); if (s2.note){ T.push('   >> ' + s2.note, ''); await key('2'); } continue; }
     i = idx(s, /Hit the head/); if (i >= 0){ const r = await page.evaluate(() => TXT.duel.round); await key(String((r % 5) + 1)); continue; }
@@ -71,6 +74,19 @@ s = await shot(); if (!/Rematches this session: 0/.test(s.out)) fail('session co
 if (await page.$('canvas, img, svg')) fail('graphics element found'); ok('no canvas/img/svg in DOM');
 if (errs.length) fail('console errors: ' + errs.join(' | ')); ok('no console errors');
 
+// ---- v2 fixes: fixed keys, inline reasons, capitalised zone prompts ----
+{ const all = transcript;
+  if (!/^   9\) Race for the golden fruit$/m.test(all)) fail('race not on key 9');
+  for (const [k, re] of [[1, /Shake a fruit bush/], [2, /Chop a tree/], [4, /Catch your breath/], [5, /Finish gathering now/]]){
+    const keys = new Set([...all.matchAll(new RegExp('^   (\\d)\\) ' + re.source, 'gm'))].map(m => +m[1])); if (keys.size !== 1 || !keys.has(k)) fail(`gather key for ${re} shifted: ${[...keys]}`); }
+  ok('gather keys fixed: 1 bush, 2 tree, 4 rest, 5 finish, 9 golden race');
+  if (!/^   \d\) Eat fruit \(full HP\)$/m.test(all)) fail('greyed Eat reason'); if (!/^   \d\) Guard \(not twice in a row\)$/m.test(all)) fail('greyed Guard reason');
+  ok('greyed moves show reasons inline: "Eat fruit (full HP)", "Guard (not twice in a row)"');
+  if (!passHint) fail('pass hint not tested'); ok('pass screen: "Press ENTER to continue", number key shows the hint'); }
+// canopy hidden for non-Vinny, shown for Vinny
+for (const [k, want] of [['1', true], ['2', false]]){ await page.goto(base + 'text/'); await key('1'); await key(k); s = await shot();
+  if (/canopy/i.test(s.menu.join('\n')) !== want) fail('canopy visibility for ape key ' + k); }
+ok('Climb the canopy shown only for Vinny');
 // ---- new in v2 ----
 async function checkResult(label){
   s = await shot(); const code = (s.out.match(/REPLAY CODE: (\S+)/) || [])[1]; if (!code) fail(label + ': no replay code');
@@ -82,6 +98,9 @@ async function checkResult(label){
 // rules screen, generated
 await page.goto(base + 'text/'); await key('?'); s = await shot();
 for (const [id, st] of Object.entries(R.STATS)) if (!new RegExp(`\\b${st.hp}\\b`).test(s.out)) fail('rules missing HP of ' + id);
+{ const mk = () => ({p:{ape:R.STATS.vinny, fruit:5, club:false}, hp:50, max:110, lastGuard:false}); const A = mk(), B = mk(); R.resolve(A, B, 'strike', 'feint');
+  const base = R.dmg({ape:R.STATS.vinny, club:false}, {ape:R.STATS.vinny}), sf = 50 - B.hp, line = `Strike vs Feint: base ${base} + feint-catch bonus ${sf - base} = ${sf}.`;
+  if (!s.out.includes(line)) fail('rules: strike/feint bonus line missing: ' + line); ok('rules explain: ' + line); }
 if (!/Guard twice in a row: not allowed/.test(s.out) || !s.out.includes(`heals ${R.EAT_HEAL} HP`)) fail('rules text'); ok('rules screen built from rules.js'); const rulesText = s.out;
 await key('1'); s = await shot(); if (!/Play vs bot/.test(s.all)) fail('rules back');
 // vs bot game: read line, decisive, replay
@@ -95,6 +114,7 @@ await page.goto(base + 'text/?replay=' + r1.code); s = await shot(); if (hp(s.ou
 await page.goto(base + 'text/?duel=zones'); s = await shot(); if (!/Preview: zone duel \(not decided\)/.test(s.out)) fail('zone label'); ok('zone preview label');
 await key('1'); await key('2'); T = []; reads = 0; await playOne('zones-easy'); const rz = await checkResult('zones Easy'); const zoneT = T.join('\n');
 if (!/blocked \w+\+\w+ \d of \d/.test(zoneT)) fail('zone read line'); ok('zone read line');
+if (!/^Where do you HIT\? \(step 1 of 2\)$/m.test(zoneT) || !/^(Hitting the \w+|Eating)\. Which two do you BLOCK\?/m.test(zoneT) || /^[a-z]/m.test(zoneT.split('\n').filter(l => /HIT\?|BLOCK\?/.test(l)).join('\n'))) fail('zone prompt capitals'); ok('zone prompts start with a capital');
 const bot = (await page.evaluate(() => TXT.duel.f[1].hits)).map(h => h || 'eat').slice(0, 6); if (bot.slice(0,3).join() !== bot.slice(3,6).join()) fail('easy zone bot not a pattern: ' + bot); ok('Easy zone bot repeats: ' + bot.slice(0,3).join(', '));
 s = await shot(); await key(String(idx(s, /Replay code/) + 1)); s = await shot(); if (!/IDENTICAL/.test(s.out)) fail('zone replay'); ok('zone replay identical');
 await page.goto(base + 'text/?duel=zones'); s = await shot(); await key(String(idx(s, /switch to Hard/) + 1)); await key('1'); await key('4'); await playOne('zones-hard'); await checkResult('zones Hard');

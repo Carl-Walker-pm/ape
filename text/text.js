@@ -26,17 +26,17 @@ function screen(text, opts = [], enter = null){
   out.textContent = text; choices = opts; onEnter = enter; note.textContent = '';
   menu.innerHTML = '';
   opts.forEach((o, i) => {
-    const li = document.createElement('li'); li.tabIndex = 0;
-    li.textContent = `${i+1}) ${o.label}`; if (o.off) li.className = 'off';
-    li.onclick = () => pickChoice(i); li.onkeydown = e => { if (e.key === 'Enter') pickChoice(i); };
+    const k = o.key || i + 1, li = document.createElement('li'); li.tabIndex = 0;
+    li.textContent = `${k}) ${o.label}`; if (o.off) li.className = 'off';
+    li.onclick = () => pickChoice(k - 1); li.onkeydown = e => { if (e.key === 'Enter') pickChoice(k - 1); };
     menu.appendChild(li);
   });
 }
-function pickChoice(i){ const o = choices[i]; if (!o) return; if (o.off){ note.textContent = o.why || 'Not possible now.'; return; }
+function pickChoice(i){ const o = choices.find((c, j) => (c.key || j + 1) === i + 1); if (!o) return; if (o.off){ note.textContent = o.why || 'Not possible now.'; return; }
   if (G.rec && !o.nr) G.rec.push(String(i + 1)); o.go(); }
 function enter(){ if (!onEnter) return; if (G.rec) G.rec.push('.'); onEnter(); }
 addEventListener('keydown', e => {
-  if (/^[1-9]$/.test(e.key)){ e.preventDefault(); pickChoice(+e.key - 1); }
+  if (/^[1-9]$/.test(e.key)){ e.preventDefault(); if (!choices.length && onEnter){ note.textContent = 'Press ENTER to continue.'; return; } pickChoice(+e.key - 1); }
   else if ((e.key === 'Enter' || e.key === ' ') && onEnter && document.activeElement.tagName !== 'LI'){ e.preventDefault(); enter(); }
   else if (e.key === '?' && !G.inRules){ e.preventDefault(); rules(); }
 });
@@ -108,9 +108,12 @@ function gatherTurn(who){
   if (G.turn === TG.GOLD_TURN) t += '!! GOLDEN FRUIT IN THE CENTRE! Race for it (uses this turn).\n   If both apes race, the ape with less fruit so far gets it.\n\n';
   t += (G.log.slice(-6).join('\n') || 'Your grove: 3 fruit bushes, 3 trees, 1 canopy. They grow back after a few turns.') + '\n\n';
   t += `${G.mode === 'hot' ? `PLAYER ${who+1} (${p.ape.name}), what now?` : 'What now?'}`;
-  const opts = TG.actions(p, camp, G.turn).map(a => ({label:a.label, off:!a.ok, why: TG.why(p, camp, G.turn, a.id), go:() => afterPick(who, a.id)}));
-  if (G.turn === TG.GOLD_TURN) opts.unshift({label:'Race for the golden fruit', go:() => afterPick(who, 'gold')});
-  opts.push({label:'Finish gathering now', go:() => { G.turn = 999; endGather(); }});
+  // fixed keys, never shift: 1 bush, 2 tree, 3 canopy (Vinny only, hidden for others), 4 rest, 5 finish, 9 golden race
+  const KEY = {bush:1, tree:2, canopy:3, rest:4};
+  const opts = TG.actions(p, camp, G.turn).filter(a => a.id !== 'canopy' || p.ape.id === 'vinny')
+    .map(a => ({key:KEY[a.id], label:a.label.replace(', Vinny only', ''), off:!a.ok, why: TG.why(p, camp, G.turn, a.id), go:() => afterPick(who, a.id)}));
+  opts.push({key:5, label:'Finish gathering now', go:() => { G.turn = 999; endGather(); }});
+  if (G.turn === TG.GOLD_TURN) opts.push({key:9, label:'Race for the golden fruit', go:() => afterPick(who, 'gold')});
   screen(t, opts);
 }
 function afterPick(who, action){
@@ -174,6 +177,12 @@ function rulesText(){
     const r = P(x, y);
     t += `  ${MOVES[x].padEnd(9)} vs ${MOVES[y].padEnd(9)}: deals ${String(r.toB).padStart(2)}, takes ${String(r.toA).padStart(2)}\n`;
   }
+  const sf = P('strike', 'feint').toB, fg = P('feint', 'guard').toB, gs = P('guard', 'strike').toB;
+  t += `\nWHERE THE NUMBERS COME FROM (base hit ${d}):\n`;
+  t += `  Strike vs Feint: base ${d} + feint-catch bonus ${sf - d} = ${sf}.\n`;
+  const big = {id:'probe', name:'Probe', hp:1000, atk:100 + ref.dfn, dfn:ref.dfn}, mult = probe(big, ref, 'feint', 'guard', false).toB / R.dmg({ape:big, club:false}, {ape:ref});
+  t += `  Feint vs Guard or Eat: base ${d} x ${mult} (rounded) = ${fg}.\n`;
+  t += `  Guard vs Strike: the guard blocks it and hits back for half the base, rounded up = ${gs}.\n`;
   const g = {p:{fruit:5, gold:false}, hp:50, max:100, lastGuard:true}, e = {p:{fruit:5, gold:false}, hp:50, max:100, eaten:R.MAX_EATS};
   t += `\nGuard twice in a row: ${R.legal(g).includes('guard') ? 'allowed' : 'not allowed'}.\n`;
   t += `Eat: heals ${R.EAT_HEAL} HP (not above max), costs 1 fruit, ${R.MAX_EATS} per duel${R.legal({...e, p:{fruit:5, gold:true}}).includes('eat') ? ', the golden fruit gives a 4th' : ''}; without the golden fruit a ${R.MAX_EATS + 1}th Eat is ${R.legal(e).includes('eat') ? 'allowed' : 'not allowed'}.\n`;
@@ -202,6 +211,11 @@ const eatsLeft = f => R.MAX_EATS + (f.p.gold ? 1 : 0) - (f.eaten || 0);
 function fighterLines(f){
   return `${f.p.ape.name.toUpperCase().padEnd(10)} ${bar(f.hp, f.max)} ${String(Math.max(0, f.hp)).padStart(3)}/${f.max} HP\n` +
          `           fruit ${f.p.fruit}, Eats left ${eatsLeft(f)}, ${f.p.club ? `club +${R.CLUB.atk}` : 'no club'}${!G.zones && f.lastGuard ? ', guarded last round' : ''}`;
+}
+function short(f, m){
+  if (m === 'guard' && f.lastGuard) return 'not twice in a row';
+  if (m === 'eat'){ if (f.p.fruit < 1) return 'no fruit left'; if ((f.eaten || 0) >= R.MAX_EATS + (f.p.gold ? 1 : 0)) return 'no Eats left'; if (f.hp >= f.max) return 'full HP'; }
+  return 'not now';
 }
 function whyNot(f, m){
   if (m === 'guard' && f.lastGuard) return "Can't Guard twice in a row. Pick another move.";
@@ -237,15 +251,15 @@ function duelScreen(who, step){
   if (!G.zones){
     const L = R.legal(me);
     t += G.mode === 'hot' ? `${who_}pick in secret:` : 'Your move:';
-    return screen(t, R.MOVE_KEYS.map(m => ({label:`${MOVES[m].padEnd(10)} ${L.includes(m) ? HINT[m] : '(blocked)'}`, off:!L.includes(m), why:whyNot(me, m), go:() => choose(who, m)})).concat([help]));
+    return screen(t, R.MOVE_KEYS.map(m => ({label: L.includes(m) ? `${MOVES[m].padEnd(10)} ${HINT[m]}` : `${MOVES[m]} (${short(me, m)})`, off:!L.includes(m), why:whyNot(me, m), go:() => choose(who, m)})).concat([help]));
   }
   if (!step){
-    t += `${who_}${G.mode === 'hot' ? 'in secret: ' : ''}where do you HIT? (step 1 of 2)`;
+    t += `${G.mode === 'hot' ? `PLAYER ${who+1} (${me.p.ape.name}), in secret.\n` : ''}Where do you HIT? (step 1 of 2)`;
     const ok = ZC.canEat(R, me);
     return screen(t, ZN.map(z => ({label:`Hit the ${z.padEnd(6)} x${ZM[z]}  (${ZC.hitFor(R, me, op, z, ZM)} if it lands)`, go:() => duelScreen(who, {hit:z})}))
-      .concat([{label:`Eat fruit instead (+${R.EAT_HEAL} HP, no hit)`, off:!ok, why:whyNot(me, 'eat'), go:() => duelScreen(who, {hit:null})}, help]));
+      .concat([{label: ok ? `Eat fruit instead (+${R.EAT_HEAL} HP, no hit)` : `Eat fruit (${short(me, 'eat')})`, off:!ok, why:whyNot(me, 'eat'), go:() => duelScreen(who, {hit:null})}, help]));
   }
-  t += `${who_}${step.hit ? `hitting the ${step.hit}` : 'eating'}. Which two do you BLOCK? (step 2 of 2)`;
+  t += `${G.mode === 'hot' ? `PLAYER ${who+1} (${me.p.ape.name}), in secret.\n` : ''}${step.hit ? `Hitting the ${step.hit}` : 'Eating'}. Which two do you BLOCK? (step 2 of 2)`;
   screen(t, ZB.map(b => ({label:`Block ${b.join(' + ')}`, go:() => choose(who, {hit:step.hit, block:b})})).concat([{label:'Back to step 1', go:() => duelScreen(who)}]));
 }
 function narrate(a, b, ma, mb, hpA, hpB){
@@ -298,7 +312,7 @@ function passScreen(to, why, reveal){
   const D = G.duel;
   let t = head(why) + '\n';
   if (reveal) t += D.log[D.log.length - 1] + '\n\n' + fighterLines(D.f[0]) + '\n\n' + fighterLines(D.f[1]) + '\n\n';
-  t += `${THIN}\n\n      PASS THE KEYBOARD TO PLAYER ${to+1}.\n\n      Player ${to+1}, press ENTER when you're ready.\n\n${THIN}`;
+  t += `${THIN}\n\n      PASS THE KEYBOARD TO PLAYER ${to+1}.\n\n      Player ${to+1}: Press ENTER to continue.\n\n${THIN}`;
   screen(t, [], () => duelScreen(to));
   G.passTo = to;
 }
