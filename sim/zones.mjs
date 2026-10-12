@@ -1,5 +1,5 @@
 // ZONE duel mode, SIM ONLY (not in the game; play/rules.js untouched, only read for ape values).
-// Each round both apes secretly pick 1 hit zone + 2 block zones (or Eat: hit nothing, heal, still block 2).
+// Each round both apes secretly pick 1 hit zone + 2 ADJACENT block zones (no wrap legs+head; shield variant: 3 adjacent) (or Eat: hit nothing, heal, still block).
 // A hit lands if its zone isn't blocked. Damage = rules.js dmg(att, def) (atk + club - armour) x fixed zone multiplier.
 // No randomness in the rules: no crits, no dodges. Only bot choices use a seeded generator.
 // Usage: node sim/zones.mjs [--seed 42] [--n 10000]
@@ -8,15 +8,18 @@ const here = path.dirname(fileURLToPath(import.meta.url)), require = createRequi
 const R = require(path.resolve(here, '../play/rules.js'));
 const a = process.argv.slice(2), arg = (k, d) => { const i = a.indexOf('--' + k); return i >= 0 ? a[i+1] : d; };
 const SEED = arg('seed', '42'), N = +arg('n', 10000), IDS = Object.keys(R.STATS);
+// Blocks are ADJACENT zones in body order, no wrap-around (legs+head is not a block: they are not neighbours on the body).
+const Z5 = {head:1.2, chest:1.0, belly:1.0, waist:1.0, legs:0.8};
 const VARIANTS = {
-  '5 zones': {head:1.2, chest:1.0, belly:1.0, groin:1.1, legs:0.8},
-  '4 zones': {head:1.2, chest:1.0, belly:1.0, legs:0.8},
+  '5 zones':          {M:Z5, k:2},
+  '4 zones':          {M:{head:1.2, chest:1.0, belly:1.0, legs:0.8}, k:2},   // waist dropped
+  '5 zones + shield': {M:Z5, k:3},                                          // fixed shield: both apes block 3 adjacent
 };
 const LOADOUT = {fruit:3, club:true};      // same for every ape: fair start, isolates the duel
 const LOW = 0.4;                            // bots eat below 40% HP when they can
 function rngFrom(str){ let h = 1779033703 ^ str.length; for (const c of str){ h = Math.imul(h ^ c.charCodeAt(0), 3432918353); h = h << 13 | h >>> 19; }
   let s = h >>> 0; return () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-const pairsOf = Z => Z.flatMap((x, i) => Z.slice(i+1).map(y => [x, y]));
+let K = 2; const pairsOf = Z => Z.slice(0, Z.length - K + 1).map((_, i) => Z.slice(i, i + K));   // adjacent, no wrap
 const canEat = f => f.p.fruit > 0 && (f.eaten || 0) < R.MAX_EATS && f.hp < f.max;
 const pick = (rng, L) => L[Math.floor(rng() * L.length)];
 const argmax = (rng, L, score) => { let best = -Infinity, out = []; for (const x of L){ const v = score(x); if (v > best + 1e-9){ best = v; out = [x]; } else if (Math.abs(v - best) < 1e-9) out.push(x); } return pick(rng, out); };
@@ -33,7 +36,7 @@ const BOTS = {
     const hitP = z => H.reduce((t, h, i) => t + (h === z ? w(i) : 0), 0), blkP = z => B.reduce((t, b, i) => t + (b.includes(z) ? w(i) : 0), 0);
     const tot = B.reduce((t, _, i) => t + w(i), 0) || 1;
     const hit = argmax(s.rng, Z, z => M[z] * (1 - blkP(z) / tot) + 0.01 * s.rng());
-    const block = argmax(s.rng, pairsOf(Z), ([x, y]) => hitP(x) * M[x] + hitP(y) * M[y] + 0.01 * s.rng());
+    const block = argmax(s.rng, pairsOf(Z), bl => bl.reduce((t, z) => t + hitP(z) * M[z], 0) + 0.01 * s.rng());
     const eat = canEat(me) && me.hp < LOW * me.max && me.hp + R.EAT_HEAL <= me.max;
     return {hit: eat ? null : hit, block};
   },
@@ -55,9 +58,9 @@ const pct = v => (v * 100).toFixed(1) + '%';
 console.log(`ZONE duel sim (sim only). Seed ${SEED}, ${N} duels per pair. Loadout for every ape: club + ${LOADOUT.fruit} fruit, Eat heals ${R.EAT_HEAL}, max ${R.MAX_EATS} Eats, ${R.MAX_ROUNDS} rounds then HP% decides.`);
 console.log('Ape stats from play/rules.js: ' + IDS.map(k => `${k} ${R.STATS[k].hp}hp/${R.STATS[k].atk}atk/${R.STATS[k].dfn}arm`).join(', '));
 const summary = [];
-for (const [vn, M] of Object.entries(VARIANTS)){
-  const Z = Object.keys(M);
-  console.log(`\n=== ${vn}: ${Z.map(z => `${z} x${M[z]}`).join(', ')}; pick 1 hit + 2 blocks ===`);
+for (const [vn, {M, k}] of Object.entries(VARIANTS)){
+  const Z = Object.keys(M); K = k;
+  console.log(`\n=== ${vn}: ${Z.map(z => `${z} x${M[z]}`).join(', ')}; pick 1 hit + ${k} adjacent blocks (${pairsOf(Z).map(b => b.join('+')).join(', ')}; no wrap) ===`);
   // balance: each side gets a bot drawn from random/habit/smart, sides alternate
   console.log(`\nBalance (row ape win %, bots mixed random/habit/smart):`);
   const rate = {};
