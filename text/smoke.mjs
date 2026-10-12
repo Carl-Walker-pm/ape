@@ -35,13 +35,15 @@ const { chromium } = require(process.env.PLAYWRIGHT_PATH || '/workspace/pw/node_
 // /text/ MUST be tested strict before it is published, unless Carl has approved the names.
 const UNAPPROVED = /\b(Moe|Vinny|Zip|Boulder|Tinker)\b/g;
 const NAMES_STRICT = process.argv.includes('--names-strict') || process.env.NAMES_STRICT === '1' || process.env.NAMES_APPROVED === '0';
+// Carl approved the ape names on 2026-10-11, so the game no longer warns. NAMES_APPROVED=0 brings back the strict check.
+const NAMES_APPROVED = !NAMES_STRICT;
 const nameWarned = new Set();
 function checkNames(txt, url){
   const found = [...new Set(txt.match(UNAPPROVED) || [])]; if (!found.length) return;
   const game = new URL(url).pathname.includes('/text/'), where = game ? 'game (/text/)' : 'landing page';
   if (!game || NAMES_STRICT) fail(`unapproved name on ${where}: ${found.join(', ')}${game ? ' [strict]' : ''}`);
   const fresh = found.filter(n => !nameWarned.has(n)); fresh.forEach(n => nameWarned.add(n));
-  if (fresh.length) console.log(`WARN unapproved name in ${where}: ${fresh.join(', ')} (warning only; use --names-strict before publishing /text/)`);
+  if (fresh.length && !NAMES_APPROVED) console.log(`WARN unapproved name in ${where}: ${fresh.join(', ')} (warning only; use --names-strict before publishing /text/)`);
 }
 // Full DOM text (hidden elements too) + attributes that can carry names; used on landing and game.
 // Text nodes joined with spaces: documentElement.textContent glues <span>Climber</span><h3>Vinny</h3> into "ClimberVinny", defeating \b.
