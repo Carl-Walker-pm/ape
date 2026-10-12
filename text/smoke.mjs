@@ -4,7 +4,7 @@
 import { createRequire } from 'module'; import fs from 'fs'; import path from 'path'; import { fileURLToPath } from 'url';
 const here = path.dirname(fileURLToPath(import.meta.url)), require = createRequire(import.meta.url);
 const R = require(path.resolve(here, '../play/rules.js')), TG = require(path.resolve(here, 'gather.js'));
-const fail = m => { console.error('FAIL', m); process.exit(1); }, ok = m => console.log('ok  ', m);
+const fail = m => { console.error('FAIL', m); process.exitCode = 1; process.exit(1); }, ok = m => console.log('ok  ', m);
 // ---- node ----
 function nodeGame(){ const P = ['vinny','zip'].map((id, i) => ({ape:{id, name:id, ...R.STATS[id]}, i, fruit:0, wood:0, gold:false, club:false})), C = P.map(() => TG.newCamp());
   for (let t = 1; t <= 14; t++){ if (t === TG.GOLD_TURN){ TG.golden(P, [true, true], R.GOLD_FRUIT); continue; }
@@ -18,7 +18,13 @@ const src = ['text.js','gather.js','index.html'].map(f => fs.readFileSync(path.j
   if (!/dead\[0\] && dead\[1\]\) return null/.test(src)) fail('double KO must be silent'); ok('node: voice lines <= 40 chars, no numbers/luck words, silent on double KO'); }
 if (/Math\.random|localStorage|<canvas|<img|getContext/.test(src)) fail('random/storage/graphics in source'); ok('node: no Math.random, storage, canvas or images');
 // ---- browser ----
-const base = process.argv[2] || 'http://localhost:8765/', tfile = process.argv[3];
+// No URL given: serve this checkout locally on a free port (so the test never hits whatever runs on :8765).
+let base = process.argv[2], tfile = process.argv[3];
+if (!base) { const http = await import('node:http'), root = path.resolve(here, '..'), MIME = {'.html':'text/html', '.js':'text/javascript', '.css':'text/css'};
+  const srv = http.createServer((q, r) => { const p = path.join(root, decodeURIComponent(new URL(q.url, 'http://x').pathname)), f = p.endsWith('/') ? p + 'index.html' : p;
+    if (!f.startsWith(root) || !fs.existsSync(f)) { r.writeHead(404); return r.end(); } r.writeHead(200, {'content-type': MIME[path.extname(f)] || 'application/octet-stream'}); fs.createReadStream(f).pipe(r); });
+  await new Promise(r => srv.listen(0, '127.0.0.1', r)); srv.unref(); base = `http://127.0.0.1:${srv.address().port}/`; console.log('serving this checkout at ' + base); }
+process.on('unhandledRejection', e => fail('error: ' + (e && e.message || e)));
 const { chromium } = require('/workspace/pw/node_modules/playwright');
 const BANNED = /\b(bet|wager|stake|gamble|odds|jackpot|payout|casino)\b/i;
 const browser = await chromium.launch(); const page = await browser.newPage(); const errs = [];

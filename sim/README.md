@@ -29,11 +29,14 @@ All stats, bots and targets are team proposals for the Nov 18 fun test, not fina
 The prototype's vs-bot mode has **Easy** (default for testers: the bot walks and gathers at 55% speed) and **Hard** (full speed). The difficulty lives only in `play/game.js`; the sim always uses the full-speed rules from `play/rules.js`, so the bot-vs-bot results here are unaffected by it.
 
 ## Balance gate (`balance_check.mjs`)
-Runs the existing `text_sim.mjs` (text edition, golden catch-up rule) and `zones.mjs` (5 zones, 4 zones, 5 zones + shield) unchanged, 10,000 duels per pair on seeds 42, 7 and 1234, prints each win-% table and exits 1 if any pair is outside 45-55%. Takes about 1 minute.
+Runs the existing `text_sim.mjs` (text edition, golden catch-up rule) and `zones.mjs` (5 zones, 4 zones, 5 zones + shield) unchanged, 10,000 duels per pair on seeds 42, 7 and 1234, prints each win-% table and exits 1 if any pair is outside 45-55%. It also requires the smart bot to beat random by at least 65% in every mode (`--skill-min`); for the text duel that number comes from `game_sim.mjs --only skill`, which plays the same `play/rules.js` duel. Takes about 3 minutes.
 
 ```sh
 node sim/balance_check.mjs                       # full gate
 node sim/balance_check.mjs --only text --seeds 42 --pairs 1000   # quick look
 sh scripts/install-hooks.sh                      # pre-commit hook: runs the gate when rules files are staged
 ```
-CI: `.github/workflows/balance.yml` runs it on any push/PR touching `play/rules.js`, `text/gather.js` or the sim files.
+CI: `.github/workflows/balance.yml` runs it on any push/PR touching `play/rules.js`, `text/gather.js` or the sim files, the check script or the hook installer.
+
+### Replay guard (`replay_guard.mjs`)
+Replays the codes in `replay-fixtures.json` (3 text duels, 2 zone duels) headlessly with the game's own `text/` code and fails if final HP, rounds or winner change. Fixtures are keyed on the replay-code version (`CODE_VERSION` in `text/text.js`, currently `T3`): same version + different outcome fails; a bumped version marks them stale (reported; `--strict-version` fails). If a change is meant to alter outcomes: `node sim/replay_guard.mjs --regen`. Needs Playwright (`/workspace/pw` or `PLAYWRIGHT_PATH`). Runs inside `balance_check.mjs` (skip with `--no-replay`).
