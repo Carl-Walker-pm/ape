@@ -348,7 +348,7 @@ function duelScreen(who, step){
   const D = G.duel, me = D.f[who], op = D.f[1 - who];
   // face-off: only the last reveal, the opponent read and the moves (HP, stats and the full history live on the cards and in the log)
   let t = head(`THE DUEL, ROUND ${D.round}${G.zones ? '  (ZONE PREVIEW)' : ''}`) + '\n';
-  t += (D.log[D.log.length - 1] || 'Both apes pick in secret. The moves are revealed together.') + '\n\n';
+  if (!D.log.length) t += 'Both apes pick in secret. The moves are revealed together.\n\n';   // the last reveal sits in the Round revealed panel above
   t += readLine(op) + (D.round >= 3 ? '\n' : '');
   const who_ = G.mode === 'hot' ? `PLAYER ${who+1} (${me.p.ape.name}), ` : '';
   const help = {label:'? Rules', nr:true, go:rules};
