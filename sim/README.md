@@ -27,3 +27,13 @@ All stats, bots and targets are team proposals for the Nov 18 fun test, not fina
 
 ## Bot difficulty in the game
 The prototype's vs-bot mode has **Easy** (default for testers: the bot walks and gathers at 55% speed) and **Hard** (full speed). The difficulty lives only in `play/game.js`; the sim always uses the full-speed rules from `play/rules.js`, so the bot-vs-bot results here are unaffected by it.
+
+## Balance gate (`balance_check.mjs`)
+Runs the existing `text_sim.mjs` (text edition, golden catch-up rule) and `zones.mjs` (5 zones, 4 zones, 5 zones + shield) unchanged, 10,000 duels per pair on seeds 42, 7 and 1234, prints each win-% table and exits 1 if any pair is outside 45-55%. Takes about 1 minute.
+
+```sh
+node sim/balance_check.mjs                       # full gate
+node sim/balance_check.mjs --only text --seeds 42 --pairs 1000   # quick look
+sh scripts/install-hooks.sh                      # pre-commit hook: runs the gate when rules files are staged
+```
+CI: `.github/workflows/balance.yml` runs it on any push/PR touching `play/rules.js`, `text/gather.js` or the sim files.
