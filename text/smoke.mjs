@@ -13,6 +13,9 @@ function nodeGame(){ const P = ['vinny','zip'].map((id, i) => ({ape:{id, name:id
 if (nodeGame() !== nodeGame()) fail('gather not deterministic'); ok('node: gather is deterministic');
 if (TG.turnsFor({ape:{id:'zip'}}) !== TG.TURNS + 2) fail('zip turns'); ok(`node: ${TG.TURNS} turns, golden fruit on turn ${TG.GOLD_TURN}`);
 const src = ['text.js','gather.js','index.html'].map(f => fs.readFileSync(path.join(here, f), 'utf8')).join('\n');
+{ const m = src.match(/const VOICE = (\{[\s\S]*?\n\});/); if (!m) fail('voice table missing'); const V = eval('(' + m[1] + ')'), N = {vinny:'Vinny', boulder:'Boulder', zip:'Zip', moe:'Big Moe', tinker:'Tinker'};
+  for (const k in V) for (const l of [].concat(...Object.values(V[k]))){ const t = `${N[k]}: "${l}"`; if (t.length > 40) fail('voice line over 40: ' + t); if (/\d|\b(dice|luck|roll|bet|odds)\b/i.test(l)) fail('voice line word: ' + l); }
+  if (!/dead\[0\] && dead\[1\]\) return null/.test(src)) fail('double KO must be silent'); ok('node: voice lines <= 40 chars, no numbers/luck words, silent on double KO'); }
 if (/Math\.random|localStorage|<canvas|<img|getContext/.test(src)) fail('random/storage/graphics in source'); ok('node: no Math.random, storage, canvas or images');
 // ---- browser ----
 const base = process.argv[2] || 'http://localhost:8765/', tfile = process.argv[3];
@@ -63,7 +66,7 @@ await key(String(idx(s, /Play vs bot/) + 1)); s = await shot(); if (!/PICK YOUR 
 await key('1'); T = [];
 let r = await playOne('bot'); if (!r.sawGold || !r.sawCue) fail('golden turn/cue'); ok('gather turns + golden cue + golden race');
 if (!r.toast) fail('no blocked-move toast'); ok('toast: ' + r.toast);
-ok('duel to result vs Easy bot'); if (!/club \+4/.test(T.join('\n').split('THE DUEL, ROUND 1')[1].split('ZIP')[0])) fail('player club not crafted'); ok('club crafted at the workbench'); const transcript = T.join('\n');
+ok('duel to result vs Easy bot'); if (!(await page.evaluate(() => TXT.players[0].club))) fail('player club not crafted');  /* club shows on the card now, not in the duel text */ ok('club crafted at the workbench'); const transcript = T.join('\n');
 if (!/\[#+-*\]/.test(transcript)) fail('no HP bars'); ok('HP text bars');
 s = await shot(); await key(String(idx(s, /Rematch/) + 1)); s = await shot(); if (!/GATHER/i.test(s.out)) fail('rematch'); ok('rematch starts a new gather');
 // hot seat with Hard toggle check
