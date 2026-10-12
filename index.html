@@ -34,6 +34,15 @@ p.lead{font-size:1.1rem;color:var(--soft);max-width:620px}
 .card p{margin:0;color:var(--soft);font-size:.95rem}
 .cta{display:inline-block;background:var(--leaf);color:#fff;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:12px}
 .cta:hover{background:#4d7a49}
+section.block{margin:48px 0}
+section.block h2{font-size:1.6rem;margin:0 0 8px}
+section.block p{color:var(--soft);max-width:680px}
+ul.steps{color:var(--soft);padding-left:20px}
+.gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px}
+figure{margin:0;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 2px 10px rgba(47,59,47,.06)}
+figure img{display:block;width:100%;height:auto}
+figcaption{padding:10px 14px;font-size:.9rem;color:var(--soft)}
+figcaption em{display:block;font-size:.8rem;color:#8a8f7a}
 footer{text-align:center;color:var(--soft);font-size:.85rem;padding:24px}
 </style>
 </head>
@@ -42,12 +51,33 @@ footer{text-align:center;color:var(--soft);font-size:.85rem;padding:24px}
 <span class="badge">🌱 Coming soon</span>
 <h1>Pick your ape, grab the fruit, win the duel.</h1>
 <div class="art" aria-hidden="true">🦍🍌🌴</div>
-<p class="lead">A cheeky jungle game about gathering, crafting and one-on-one duels. Build up your ape and prove yourself in the clearing.</p>
+<p class="lead">A cheeky jungle game about gathering, crafting and one-on-one duels. Build up your ape.</p>
 <section class="grid">
 <div class="card"><div class="ic">🐒</div><h3>Pick an ape</h3><p>Choose your ape, each with its own strengths.</p></div>
 <div class="card"><div class="ic">🍌</div><h3>Gather</h3><p>Collect fruit, wood, stone and metal across the jungle.</p></div>
 <div class="card"><div class="ic">🔨</div><h3>Craft tools</h3><p>Turn what you find into tools that help you grow.</p></div>
 <div class="card"><div class="ic">🤼</div><h3>Duel</h3><p>Duel another player, one on one.</p></div>
+</section>
+<section class="block" id="world">
+<h2>🗺️ The world</h2>
+<p>Start in your home grove, then head out into a world of zones to explore. The further you go, the more you can gather and build.</p>
+</section>
+<section class="block" id="pvp">
+<h2>🤼 PvP</h2>
+<p>Face another player one-on-one. Skill decides it, not luck. Lost? Hit rematch.</p>
+</section>
+<section class="block" id="rpg">
+<h2>🌱 RPG</h2>
+<p>Pick an ape with its own strengths, earn XP, craft better tools and grow your ape as you play.</p>
+</section>
+<section class="block" id="concept-art">
+<h2>🎨 Concept art</h2>
+<div class="gallery">
+<figure><img src="assets/concept-map.png" alt="A parchment map of unnamed jungle zones around a home grove" loading="lazy" width="1200" height="750"><figcaption>The world<em>Concept art, not final gameplay</em></figcaption></figure>
+<figure><img src="assets/concept-gather.png" alt="An ape up a tree reaching for golden fruit" loading="lazy" width="1200" height="750"><figcaption>Gathering<em>Concept art, not final gameplay</em></figcaption></figure>
+<figure><img src="assets/concept-duel.png" alt="Two apes face to face in a ring of stones, watched by a monkey crowd" loading="lazy" width="1200" height="750"><figcaption>A duel<em>Concept art, not final gameplay</em></figcaption></figure>
+<figure><img src="assets/concept-craft.png" alt="An ape beside a workbench with a stone tool" loading="lazy" width="1200" height="750"><figcaption>Crafting<em>Concept art, not final gameplay</em></figcaption></figure>
+</div>
 </section>
 <p>We're still building. Want to see it take shape?</p>
 <a class="cta" href="https://github.com/Carl-Walker-pm/ape">Follow along on GitHub →</a>
