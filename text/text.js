@@ -209,7 +209,7 @@ function gatherTurn(who){
   let t = head(`GATHERING, TURN ${G.turn} OF ${TG.turnsFor(p)}`);
   t += `\n${status(G.players[0])}\n${status(G.players[1])}\n\n`;
   if (G.turn === TG.GOLD_TURN - 1) t += '!! Something golden is ripening in the centre...\n\n';
-  if (G.turn === TG.GOLD_TURN) t += '!! GOLDEN FRUIT IN THE CENTRE! Race for it (uses this turn).\n   If both apes race, the ape with less fruit so far gets it.\n\n';
+  if (G.turn === TG.GOLD_TURN) t += '!! GOLDEN FRUIT IN THE CENTRE! Race for it (uses this turn).\n   If both apes race, the ape with less fruit so far gets it, and nobody does on a tie.\n\n';
   t += (G.log.slice(-6).join('\n') || 'Your grove: 3 fruit bushes, 3 trees, 1 canopy. They grow back after a few turns.') + '\n\n';
   t += `${G.mode === 'hot' ? `PLAYER ${who+1} (${p.ape.name}), what now?` : 'What now?'}`;
   // fixed keys, never shift: 1 bush, 2 tree, 3 canopy (Vinny only, hidden for others), 4 rest, 5 finish, 9 golden race
