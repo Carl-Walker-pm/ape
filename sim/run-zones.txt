@@ -1,0 +1,38 @@
+ZONE duel sim (sim only). Seed 42, 10000 duels per pair. Loadout for every ape: club + 3 fruit, Eat heals 20, max 3 Eats, 30 rounds then HP% decides.
+Ape stats from play/rules.js: vinny 110hp/12atk/3arm, boulder 82hp/15atk/3arm, zip 97hp/13atk/3arm, moe 112hp/12atk/3arm, tinker 101hp/13atk/3arm
+
+=== 5 zones: head x1.2, chest x1, belly x1, groin x1.1, legs x0.8; pick 1 hit + 2 blocks ===
+
+Balance (row ape win %, bots mixed random/habit/smart):
+             vinny  boulder      zip      moe   tinker
+vinny            -    48.5%    51.5%    48.9%    47.7%
+boulder      51.5%        -    52.0%    49.7%    49.7%
+zip          48.5%    48.0%        -    47.2%    45.5%
+moe          51.1%    50.3%    52.8%        -    50.0%
+tinker       52.3%    50.3%    54.5%    50.0%        -
+Range 45.5%-54.5% -> PASS (45-55%)
+
+Skill test (mirror matches, 10000 per ape, sides alternate):
+  smart vs habit : 100.0%  (vinny 100.0%, boulder 99.9%, zip 100.0%, moe 100.0%, tinker 100.0%)
+  smart vs random: 70.4%  (vinny 71.0%, boulder 70.1%, zip 69.9%, moe 70.5%, tinker 70.4%)
+  habit vs random: 59.4%
+
+=== 4 zones: head x1.2, chest x1, belly x1, legs x0.8; pick 1 hit + 2 blocks ===
+
+Balance (row ape win %, bots mixed random/habit/smart):
+             vinny  boulder      zip      moe   tinker
+vinny            -    48.7%    51.5%    48.5%    47.9%
+boulder      51.3%        -    53.4%    50.4%    48.6%
+zip          48.5%    46.6%        -    48.6%    48.1%
+moe          51.5%    49.6%    51.4%        -    50.1%
+tinker       52.1%    51.4%    51.9%    49.9%        -
+Range 46.6%-53.4% -> PASS (45-55%)
+
+Skill test (mirror matches, 10000 per ape, sides alternate):
+  smart vs habit : 100.0%  (vinny 100.0%, boulder 99.9%, zip 99.9%, moe 100.0%, tinker 100.0%)
+  smart vs random: 66.2%  (vinny 66.8%, boulder 66.7%, zip 65.5%, moe 66.1%, tinker 66.0%)
+  habit vs random: 56.5%
+
+SUMMARY
+5 zones: balance 45.5%-54.5% PASS; smart vs habit 100.0%, smart vs random 70.4%
+4 zones: balance 46.6%-53.4% PASS; smart vs habit 100.0%, smart vs random 66.2%
