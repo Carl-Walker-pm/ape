@@ -1,6 +1,6 @@
 /* Going ApeSh!t text edition. Style: text/style-sheet (Kojima): "a jungle at night seen through a smartwatch".
-[hidden]{display:none!important}
    System fonts only, no image files, no canvas, no outside requests. Gold is reserved for the golden fruit. */
+[hidden]{display:none!important}
 :root{
   --page:#0E1F17; --card:#16291F; --line:#2A4535;
   --text:#E8F0EA; --muted:#9DB3A6; --teal:#4FC7B8; --gold:#E8B84A; --bad:#E06A5A;
