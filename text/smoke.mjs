@@ -132,6 +132,7 @@ const ZC = require(path.resolve(here, '../sim/zones-core.js')); if (ZC.blocksFor
 // ---- UI pass: real buttons, click + Confirm, cards, log, phone width ----
 await page.goto(base + 'text/');
 if (await page.$$eval('#menu > *', l => l.some(b => b.tagName !== 'BUTTON'))) fail('menu items are not buttons');
+if (await page.isVisible('#confirmRow') || await page.isVisible('#reveal')) fail('Confirm/reveal visible on the menu'); ok('menu screen: no Confirm row or reveal panel');
 if (!(await page.$$eval('#menu button .k', l => l.every(k => /^\[\d\]$/.test(k.textContent))))) fail('key not shown on buttons'); ok('every choice is a <button> showing its key, e.g. [1]');
 await page.click('#menu button:has-text("Play vs bot")'); await page.click('#menu button:has-text("Vinny")');
 if (!/Vinny/.test(await page.textContent('#me')) || !/110 \/ 110 HP/.test(await page.textContent('#me'))) fail('your ape card'); if (!/Zip/.test(await page.textContent("#op"))) fail('opponent card');
