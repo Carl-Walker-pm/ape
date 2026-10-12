@@ -1,3 +1,3 @@
-# Pick your ape, grab the fruit, win the duel.
+# Going ApeSh!t
 
 Landing page for an upcoming jungle duel game. Coming soon.
