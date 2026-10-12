@@ -1,48 +1,36 @@
 /* Going ApeSh!t: playable prototype v0. Plain JS + Canvas, no build step, no tracking.
-   Rules follow sim/duel_sim.py where they overlap (stats, fixed damage, no random rolls).
+   Rules live in rules.js, which the sim (sim/game_sim.mjs) runs directly. No random rolls.
    All stats and rules are proposals for the fun test. */
 'use strict';
 (() => {
-const W = 24, H = 16, T = 40;               // arena 24x16 tiles (game-map.md)
-const GATHER_SECS = 90, GOLD_AT = 60;        // golden fruit spawns 60 s in, centre
-const EAT_HEAL = 14, GOLD_HP = 10, MAX_ROUNDS = 30;
-const LS = 'goingApeshit.v0';
+const R = window.ApeRules;                   // shared rules (rules.js), also run by the sim
+const {W, H, GATHER_SECS, GOLD_AT, EAT_HEAL, GOLD_HP, MAX_ROUNDS, CLUB, GOLD} = R;
+const T = 40;
 
-// ---- apes (proposals; same numbers as sim/duel_sim.py v2, slice mode balanced 45.9-54.1%) ----
+// ---- apes (proposals; stats in rules.js) ----
 const APES = [
   {id:'vinny', name:'Vinny', role:'the climber', img:'img/ape-climber.jpg', color:'#c9772f',
-   hp:112, atk:11, dfn:4, spd:3.8, trick:'Climbs the canopies in the corners for 3 high fruit. Only Vinny can reach them.'},
+   trick:'Climbs the canopies in the corners for 3 high fruit. Only Vinny can reach them.'},
   {id:'boulder', name:'Boulder', role:'the smasher', img:'img/ape-smasher.jpg', color:'#5b5f66',
-   hp:86, atk:15, dfn:3, spd:3.0, trick:'Smashes trees for 2 wood instead of 1.'},
+   trick:'Smashes trees for 2 wood instead of 1.'},
   {id:'zip', name:'Zip', role:'the quick one', img:'img/ape-quick.jpg', color:'#d9b04a',
-   hp:104, atk:13, dfn:3, spd:5.2, trick:'Fastest feet in the grove, and gathers in half the time.'},
+   trick:'Fastest feet in the grove, and gathers in half the time.'},
   {id:'moe', name:'Big Moe', role:'the tank', img:'img/ape-tank.jpg', color:'#3d3a45',
-   hp:98, atk:12, dfn:4, spd:2.8, trick:'Every fruit eaten in a duel heals 50% more.'},
+   trick:'Shakes trees: every tree also drops 1 fruit.'},
   {id:'tinker', name:'Tinker', role:'the crafter', img:'img/ape-thinker.jpg', color:'#8a5a3c',
-   hp:93, atk:13, dfn:2, spd:3.6, trick:'Crafts the club with 2 less wood, and it hits 2 harder.'},
-];
-const CLUB = {wood:4, fruit:1, atk:4};
+   trick:'Crafts the club with 2 less wood.'},
+].map(a => Object.assign(a, R.STATS[a.id]));
 const MOVES = {
   strike:{label:'Strike', hint:'Hit hard. Beats Feint.'},
   guard: {label:'Guard',  hint:'Block a Strike and hit back. Not twice in a row.'},
   feint: {label:'Feint',  hint:'Fake out a Guard or an eater. Loses to Strike.'},
-  eat:   {label:'Eat fruit', hint:'Heal. Costs 1 fruit.'},
+  eat:   {label:'Eat fruit', hint:'Heal 20. Costs 1 fruit. 3 per duel.'},
 };
 
-// ---- storage (local only) ----
-function store(){ try{ return JSON.parse(localStorage.getItem(LS)) || {}; }catch(e){ return {}; } }
-function bump(k){ const s = store(); s[k] = (s[k]||0)+1; try{ localStorage.setItem(LS, JSON.stringify(s)); }catch(e){} return s[k]; }
+// this session only (in memory; nothing stored or sent)
+const SESSION = {rematches:0, duels:0};
 
 // ---- arena layout (game-map.md, mirrored) ----
-function makeNodes(){
-  const n = [];
-  [[4,3],[6,10],[8,4]].forEach(([x,y]) => { n.push({kind:'fruit',x,y,re:20}); n.push({kind:'fruit',x:W-1-x,y:H-1-y,re:20}); });
-  [[3,12],[7,2],[5,6]].forEach(([x,y]) => { n.push({kind:'tree',x,y,re:30}); n.push({kind:'tree',x:W-1-x,y:H-1-y,re:30}); });
-  n.push({kind:'high',x:1,y:1,re:45}); n.push({kind:'high',x:22,y:14,re:45});
-  n.forEach(o => o.readyAt = 0);
-  return n;
-}
-const GOLD = {x:11.5, y:7.5};
 
 // ---- DOM ----
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
@@ -61,7 +49,6 @@ function newPlayer(ape, i, isBot){
 // ================= title =================
 function title(){
   G.screen = 'title'; hud.classList.add('hidden'); clearCanvas();
-  const s = store();
   show(`<span class="tag">Playable prototype · v0</span>
     <h1>Going <em>ApeSh!t</em></h1>
     <p class="sub">Pick your ape, grab the fruit, win the duel.</p>
@@ -71,6 +58,12 @@ function title(){
   document.getElementById('b-bot').onclick = () => { G.mode='bot'; select(); };
   document.getElementById('b-hot').onclick = () => { G.mode='hot'; select(); };
 }
+
+// world-bound wrappers around the shared rules
+const nodeAt = p => R.nodeAt(G,p), canUse = (p,n) => R.canUse(G,p,n), gatherTick = (p,dt) => R.gatherTick(G,p,dt);
+const clampMove = R.clampMove, botMove = (p,dt) => R.botMove(G,p,dt);
+const {clubWood, canCraft, doCraft, clubAtk, dmg, heal, resolve, legal, botPick} = R;
+G.resolve = resolve;
 
 // ================= ape select =================
 function select(){
@@ -83,7 +76,7 @@ function renderSelect(){
   const el = show(`<h2>${who}</h2>
     <div class="apes">${APES.map((a,k)=>`<div class="ape ${G.picks.includes(k)?'taken':''}" data-k="${k}" tabindex="0" role="button" aria-label="${a.name}">
       <img src="${a.img}" alt=""><b>${a.name}</b><span style="opacity:.8">${a.role}</span>
-      <div class="bars"><span>HP ${bar(a.hp,112)}</span><span>Hit ${bar(a.atk,15)}</span><span>Armour ${bar(a.dfn,4)}</span><span>Speed ${bar(a.spd,5.2)}</span></div>
+      <div class="bars"><span>HP ${bar(a.hp,112)}</span><span>Hit ${bar(a.atk,15)}</span><span>Speed ${bar(a.spd,5.2)}</span></div>
       <div class="trick">${a.trick}</div></div>`).join('')}</div>
     <p style="font-size:14px;opacity:.8">${G.mode==='hot'?'P1 moves with WASD, P2 with the arrow keys.':'Move with WASD or click where to go.'}</p>
     <button class="ghost" id="b-back">Back</button>`, 'screen bg shade');
@@ -109,42 +102,13 @@ function startMatch(){
 }
 function startGather(){
   G.players.forEach((p,i) => Object.assign(p, newPlayer(p.ape,i,p.bot)));
-  G.nodes = makeNodes(); G.gold = null; G.t = 0; G.screen = 'gather'; G.last = performance.now();
+  G.nodes = R.makeNodes(); G.gold = null; G.t = 0; G.screen = 'gather'; G.last = performance.now();
   G.flash = [];
   hud.classList.remove('hidden');
   show(`<div style="position:absolute;bottom:10px;left:0;right:0;text-align:center;pointer-events:none;font-size:14px;opacity:.85">
     ${G.mode==='hot'?'P1: WASD · P2: arrow keys':'WASD or click to move'} · walk onto a bush or tree to gather · golden fruit appears in the centre at 1:00</div>
     <button class="ghost" id="b-done" style="position:absolute;right:8px;bottom:36px;font-size:13px;padding:6px 14px">Finish early</button>`,'');
   document.getElementById('b-done').onclick = endGather;
-}
-function nodeAt(p){
-  const tx = Math.floor(p.x), ty = Math.floor(p.y);
-  return G.nodes.find(n => n.x===tx && n.y===ty);
-}
-function canUse(p, n){ return n && G.t >= n.readyAt && (n.kind!=='high' || p.ape.id==='vinny'); }
-function gatherTick(p, dt){
-  if (p.busy>0){ p.busy -= dt; if (p.busy<=0) finishGather(p); return; }
-  const n = nodeAt(p);
-  if (canUse(p,n)){ p.busy = p.ape.id==='zip' ? 0.4 : 0.8; p.node = n; }
-  if (G.gold && !G.gold.taken && Math.hypot(p.x-GOLD.x-0.5, p.y-GOLD.y-0.5) < 1.1){
-    G.gold.taken = p; p.gold = true; p.fruit += 3; G.flash.push({x:p.x,y:p.y,txt:'GOLDEN FRUIT! +3 fruit, +10 HP',t:2.5});
-  }
-}
-function finishGather(p){
-  const n = p.node; p.node = null;
-  if (!canUse(p,n) || nodeAt(p)!==n) return;
-  let txt;
-  if (n.kind==='tree'){ const w = p.ape.id==='boulder'?2:1; p.wood += w; txt = `+${w} wood`; }
-  else if (n.kind==='high'){ p.fruit += 3; txt = '+3 high fruit'; }
-  else { p.fruit += 1; txt = '+1 fruit'; }
-  n.readyAt = G.t + n.re; p.picked++;
-  G.flash.push({x:p.x,y:p.y-0.4,txt,t:1.2});
-}
-function clampMove(p, dx, dy, dt){
-  const len = Math.hypot(dx,dy); if (!len) return;
-  const s = p.ape.spd * dt / len;
-  p.x = Math.min(W-0.5, Math.max(0.5, p.x + dx*s));
-  p.y = Math.min(H-0.5, Math.max(1.5, p.y + dy*s));  // row 0 under the HUD
 }
 function humanMove(p, dt){
   const k = G.keys, alt = p.i===1;
@@ -157,26 +121,6 @@ function humanMove(p, dt){
   if (dx||dy) p.busy = 0, p.node = null;
   if (p.tx!=null){ const d=Math.hypot(dx,dy), step=p.ape.spd*dt; if (step>=d){ p.x=p.tx; p.y=p.ty; p.tx=null; return; } }
   clampMove(p, dx, dy, dt);
-}
-function botMove(p, dt){
-  if (p.busy>0) return;
-  // simple bot: golden fruit if it is up, else wood until it can craft, else nearest ready fruit
-  const need = clubWood(p);
-  let goal = null;
-  if (G.gold && !G.gold.taken) goal = {x:GOLD.x+0.5, y:GOLD.y+0.5};
-  else {
-    let best = 1e9;
-    for (const n of G.nodes){
-      if (!canUse(p,n)) continue;
-      let d = Math.hypot(n.x+0.5-p.x, n.y+0.5-p.y);
-      if (n.kind==='tree' && p.wood < need) d *= 0.5;
-      if (n.kind==='tree' && p.wood >= need+2) d *= 3;
-      if (d < best){ best = d; goal = {x:n.x+0.5, y:n.y+0.5}; }
-    }
-  }
-  if (!goal) return;
-  const dx = goal.x-p.x, dy = goal.y-p.y, d = Math.hypot(dx,dy), step = p.ape.spd*dt*0.85;
-  if (d <= step){ p.x = goal.x; p.y = goal.y; } else clampMove(p, dx, dy, dt*0.85);
 }
 function gatherUpdate(dt){
   G.t += dt;
@@ -252,10 +196,6 @@ function drawApe(x,y,p,sc){
 }
 
 // ================= craft =================
-function clubWood(p){ return CLUB.wood - (p.ape.id==='tinker'?2:0); }
-function canCraft(p){ return !p.club && p.wood >= clubWood(p) && p.fruit >= CLUB.fruit; }
-function doCraft(p){ if (!canCraft(p)) return false; p.wood -= clubWood(p); p.fruit -= CLUB.fruit; p.club = true; return true; }
-function clubAtk(p){ return p.club ? CLUB.atk + (p.ape.id==='tinker'?2:0) : 0; }
 function craft(){
   hud.classList.add('hidden');
   for (const p of G.players) if (p.bot) doCraft(p);
@@ -266,10 +206,10 @@ function craft(){
     if (!p) return duelStart();
     const ok = canCraft(p);
     show(`<div class="panel"><h2>Workbench${G.mode==='hot'?` · Player ${p.i+1}`:''}</h2>
-      <p><b>${esc(p.ape.name)}</b> has 🍌 ${p.fruit} fruit and 🪵 ${p.wood} wood${p.gold?' and the ★ golden fruit (+10 HP)':''}.</p>
+      <p><b>${esc(p.ape.name)}</b> has 🍌 ${p.fruit} fruit and 🪵 ${p.wood} wood${p.gold?' and the ★ golden fruit (a 4th Eat)':''}.</p>
       <p style="font-size:44px;margin:6px 0">🪵×${clubWood(p)} + 🍌×${CLUB.fruit} → 🏏</p>
-      <p><b>Wooden club</b>: every Strike, counter and Feint hits <b>+${CLUB.atk + (p.ape.id==='tinker'?2:0)}</b> harder.<br>
-      <span style="opacity:.8;font-size:14px">Fruit you keep is food in the duel: each one eaten heals ${p.ape.id==='moe'?Math.round(EAT_HEAL*1.5):EAT_HEAL} HP.</span></p>
+      <p><b>Wooden club</b>: every Strike, counter and Feint hits <b>+${CLUB.atk}</b> harder.<br>
+      <span style="opacity:.8;font-size:14px">Fruit you keep is food in the duel: each Eat heals ${EAT_HEAL} HP, up to ${R.MAX_EATS + (p.gold?1:0)} times.</span></p>
       <button id="b-craft" ${ok?'':'disabled'}>${ok?'Craft the club':'Not enough to craft'}</button>
       <button class="ghost" id="b-skip">${ok?'Keep the fruit, go fight':'Go fight'}</button>
       ${G.mode==='bot'?`<p style="font-size:14px;opacity:.8">${esc(G.players[1].ape.name)} (bot) ${G.players[1].club?'crafted a club.':'could not craft a club.'}</p>`:''}</div>`);
@@ -280,53 +220,9 @@ function craft(){
 }
 
 // ================= duel (turn-based, simultaneous secret picks, no random rolls) =================
-function dmg(att, def){ return Math.max(1, att.ape.atk + clubAtk(att) - def.ape.dfn); }
-function heal(p){ return p.ape.id==='moe' ? Math.round(EAT_HEAL*1.5) : EAT_HEAL; }
 // resolve one round; a,b are fighter states {p,hp,max,lastGuard}; ma/mb moves. Pure and deterministic.
-function resolve(a, b, ma, mb){
-  const out = [];
-  const one = (me, op, m, mo) => {    // effect of me's move on op, given op's move
-    let toOp = 0, note = '';
-    if (m==='strike'){
-      if (mo==='guard'){ note = `${me.p.ape.name}'s strike is blocked`; }
-      else if (mo==='feint'){ toOp = dmg(me.p,op.p) + 3; note = `${me.p.ape.name} catches the feint`; }
-      else toOp = dmg(me.p,op.p);
-    } else if (m==='guard'){
-      if (mo==='strike'){ toOp = Math.ceil(dmg(me.p,op.p)/2); note = `${me.p.ape.name} blocks and hits back`; }
-    } else if (m==='feint'){
-      if (mo==='guard' || mo==='eat'){ toOp = Math.round(dmg(me.p,op.p)*1.5); note = `${me.p.ape.name}'s feint lands`; }
-      else if (mo==='feint') note = 'Both feint. Nothing happens';
-    } else if (m==='eat'){
-      const h = Math.min(heal(me.p), me.max - me.hp + 0);
-      me.healed = h; me.p.fruit -= 1; note = `${me.p.ape.name} eats a fruit (+${heal(me.p)} HP)`;
-    }
-    return {toOp, note};
-  };
-  a.healed = b.healed = 0;
-  const ea = one(a,b,ma,mb), eb = one(b,a,mb,ma);
-  a.hp = Math.min(a.max, a.hp + a.healed) - eb.toOp;
-  b.hp = Math.min(b.max, b.hp + b.healed) - ea.toOp;
-  a.lastGuard = ma==='guard'; b.lastGuard = mb==='guard';
-  [ea,eb].forEach(e => e.note && out.push(e.note));
-  if (ea.toOp) out.push(`${b.p.ape.name} takes ${ea.toOp}`);
-  if (eb.toOp) out.push(`${a.p.ape.name} takes ${eb.toOp}`);
-  return out.join(' · ') || 'Both hold back';
-}
 G.resolve = resolve;
-function legal(f){ return Object.keys(MOVES).filter(m => !(m==='guard' && f.lastGuard) && !(m==='eat' && (f.p.fruit<1 || f.hp>=f.max))); }
 // bot: reads your habits (counters your most frequent recent move), no random numbers
-function botPick(me, op, hist){
-  const L = legal(me);
-  if (L.includes('eat') && me.hp <= me.max*0.4) return 'eat';
-  const recent = hist.slice(-4); const c = {};
-  recent.forEach(m => c[m] = (c[m]||0)+1);
-  let fav = null, n = 0; for (const m in c) if (c[m] > n){ n = c[m]; fav = m; }
-  const counter = {strike:'guard', guard:'feint', feint:'strike', eat:'feint'};
-  let want = fav ? counter[fav] : 'strike';
-  if (hist.length % 5 === 4) want = 'strike';                 // a readable rhythm you can learn
-  if (!L.includes(want)) want = L.includes('strike') ? 'strike' : L[0];
-  return want;
-}
 function duelStart(){
   const [a,b] = G.players;
   const f = p => ({p, max:p.ape.hp + (p.gold?GOLD_HP:0), hp:p.ape.hp + (p.gold?GOLD_HP:0), lastGuard:false});
@@ -344,7 +240,7 @@ function duelUI(){
     <div style="font-size:14px;opacity:.8">Round ${D.round}</div>
     <div class="log" id="log">${esc(D.log)}</div>
     <div style="margin-bottom:6px">${who}</div>
-    <div class="moves">${Object.entries(MOVES).map(([k,m]) => `<button data-m="${k}" ${L.includes(k)?'':'disabled'}>${m.label}${k==='eat'?` (${me.p.fruit})`:''}<small>${m.hint}</small></button>`).join('')}</div>
+    <div class="moves">${Object.entries(MOVES).map(([k,m]) => `<button data-m="${k}" ${L.includes(k)?'':'disabled'}>${m.label}${k==='eat'?` (${me.p.fruit} · ${R.MAX_EATS+(me.p.gold?1:0)-(me.eaten||0)} left)`:''}<small>${m.hint}</small></button>`).join('')}</div>
     <div style="font-size:12px;opacity:.7;margin-top:6px">Keys 1–4 · Strike beats Feint · Guard beats Strike · Feint beats Guard and Eat · no dice, just reads</div></div>`, '');
   ui.querySelectorAll('[data-m]').forEach(b => b.onclick = () => choose(chooser, b.dataset.m));
 }
@@ -352,14 +248,23 @@ function choose(i, m){
   const D = G.duel; if (G.screen!=='duel' || !legal(D.f[i]).includes(m)) return;
   D.picks[i] = m;
   if (G.mode==='bot') D.picks[1] = botPick(D.f[1], D.f[0], D.hist);
-  if (D.picks[0]==null || D.picks[1]==null){ D.log = 'Player 1 has picked.'; return duelUI(); }
+  if (D.picks[0]==null || D.picks[1]==null){ D.log = 'Player 1 has picked.'; return passScreen(2, ''); }
   const [ma, mb] = D.picks;
   D.hist.push(ma);
   D.log = `${D.f[0].p.ape.name}: ${MOVES[ma].label} vs ${D.f[1].p.ape.name}: ${MOVES[mb].label}. ` + resolve(D.f[0], D.f[1], ma, mb);
   D.last = [ma, mb]; D.anim = 0.6; D.picks = [null,null]; D.round++;
   const [fa,fb] = D.f;
   if (fa.hp<=0 || fb.hp<=0 || D.round > MAX_ROUNDS) return setTimeout(result, 700);
+  if (G.mode==='hot') return passScreen(1, D.log);
   duelUI();
+}
+// hot-seat hand-off: a blank screen that needs a key press, so nobody sees the other pick
+function passScreen(to, reveal){
+  G.screen = 'pass'; G.passTo = to;
+  ui.innerHTML = `<div class="screen" id="pass" style="background:#0e1e15">
+    ${reveal?`<p style="max-width:640px">${esc(reveal)}</p>`:''}
+    <h2>${to===2?'Pass the keyboard to Player 2':'Pass the keyboard back to Player 1'}</h2>
+    <p style="opacity:.8">Player ${to}, press <b>Space</b> or <b>Enter</b> when you're ready.</p></div>`;
 }
 function drawDuel(dt){
   const D = G.duel; D.anim = Math.max(0, D.anim - dt);
@@ -387,7 +292,7 @@ function drawDuel(dt){
 function result(){
   const D = G.duel, [fa,fb] = D.f;
   G.screen = 'result';
-  bump('duels');
+  SESSION.duels++;
   let w = null;
   if (fa.hp<=0 && fb.hp<=0) w = null;
   else if (fb.hp<=0) w = 0; else if (fa.hp<=0) w = 1;
@@ -398,30 +303,18 @@ function result(){
     <p>${esc(D.log)}</p>
     <p style="opacity:.8;font-size:14px">${D.round-1} rounds · ${esc(fa.p.ape.name)} ${Math.max(0,fa.hp)} HP · ${esc(fb.p.ape.name)} ${Math.max(0,fb.hp)} HP</p>
     <button id="b-rematch" style="font-size:20px;padding:14px 34px">Rematch</button><br>
+    <p style="font-size:13px;opacity:.7">Rematches this session: ${SESSION.rematches}</p>
     <button class="ghost" id="b-change">Change ape</button><button class="ghost" id="b-title">Title</button></div>`);
-  document.getElementById('b-rematch').onclick = () => { bump('rematch'); startGather(); };
+  document.getElementById('b-rematch').onclick = () => { SESSION.rematches++; startGather(); };
   document.getElementById('b-change').onclick = select;
   document.getElementById('b-title').onclick = title;
-}
-
-// ================= hidden stats page (?stats) =================
-function statsPage(){
-  const s = store();
-  const d = s.duels||0, r = s.rematch||0;
-  show(`<div class="panel"><h2>Fun-test stats (this browser only)</h2>
-    <table><tr><td>Duels finished</td><td id="st-duels">${d}</td></tr>
-    <tr><td>Rematch presses</td><td id="st-rematch">${r}</td></tr>
-    <tr><td>Rematch rate</td><td>${d?Math.round(r/d*100):0}%</td></tr></table>
-    <p style="font-size:13px;opacity:.75">Stored in localStorage on this device only. Nothing is sent anywhere.</p>
-    <button id="b-reset" class="ghost">Reset</button><button id="b-play">Play</button></div>`);
-  document.getElementById('b-reset').onclick = () => { localStorage.removeItem(LS); statsPage(); };
-  document.getElementById('b-play').onclick = () => { location.href = location.pathname; };
 }
 
 // ================= input + loop =================
 addEventListener('keydown', e => {
   G.keys[e.code] = true;
   if (G.screen==='gather' && /^(Arrow|Key[WASD])/.test(e.code)) e.preventDefault();
+  if (G.screen==='pass' && (e.code==='Space' || e.code==='Enter')){ e.preventDefault(); G.screen='duel'; return duelUI(); }
   if (G.screen==='duel' && /^Digit[1-4]$/.test(e.code)){
     const m = Object.keys(MOVES)[+e.code.slice(5)-1];
     const i = G.mode==='hot' ? (G.duel.picks[0]==null?0:1) : 0;
@@ -447,8 +340,8 @@ function frame(now){
 // test hook: jump the gather clock (used by the smoke test only)
 G.skipTo = s => { if (G.screen==='gather') G.t = s; };
 G.endGather = endGather;
+G.session = SESSION;
 
-if (/[?&]stats\b/.test(location.search)) { G.screen='stats'; statsPage(); }
-else title();
+title();
 requestAnimationFrame(frame);
 })();

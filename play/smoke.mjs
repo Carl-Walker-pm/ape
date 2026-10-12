@@ -4,7 +4,7 @@ const dir = process.argv[3] || '.';
 const b = await chromium.launch(); const pg = await b.newPage({viewport:{width:1000,height:720}});
 const errs = []; pg.on('console', m => m.type()==='error' && errs.push(m.text())); pg.on('pageerror', e => errs.push(String(e)));
 const ok = (c, m) => { if (!c) throw new Error('FAIL: '+m); console.log('ok -', m); };
-await pg.goto(url); await pg.evaluate(()=>localStorage.clear()); await pg.reload();
+await pg.goto(url);
 ok(await pg.isVisible('text=Going'), 'title'); await pg.screenshot({path:dir+'/shot-1-title.png'});
 await pg.click('#b-bot'); await pg.waitForSelector('.ape'); await pg.screenshot({path:dir+'/shot-2-select.png'});
 await pg.click('.ape[data-k="0"]');
@@ -25,22 +25,33 @@ await pg.waitForSelector('[data-m="strike"]');
 let n=0; const seq=['strike','feint','strike','guard','strike','eat'];
 while (await pg.evaluate(()=>APE.screen)==='duel' && n<40){
   const m = seq[n%seq.length]; const sel = `[data-m="${m}"]:not([disabled])`;
-  if (await pg.$(sel)) await pg.click(sel); else await pg.click('[data-m="strike"]:not([disabled]), [data-m="feint"]:not([disabled])');
+  if (await pg.$(sel)) await pg.click(sel); else await pg.click('[data-m="strike"]');
   n++; if (n===3) await pg.screenshot({path:dir+'/shot-5-duel.png'});
-  await pg.waitForTimeout(80);
+  await pg.waitForTimeout(120);
 }
 await pg.waitForSelector('#b-rematch',{timeout:5000}); ok(true, `duel ended after ${n} picks`);
 await pg.screenshot({path:dir+'/shot-6-result.png'});
 await pg.click('#b-rematch'); ok(await pg.evaluate(()=>APE.screen)==='gather', 'rematch restarts gather');
-await pg.goto(url+'?stats'); const r = await pg.textContent('#st-rematch');
-ok(r==='1', 'stats page shows 1 rematch'); await pg.screenshot({path:dir+'/shot-7-stats.png'});
+ok(await pg.evaluate(()=>APE.session.rematches)===1, 'session rematch count = 1 (in memory)');
+await pg.evaluate(()=>APE.endGather()); await pg.click('#b-skip'); await pg.waitForSelector('[data-m="strike"]');
+while (await pg.evaluate(()=>APE.screen)==='duel'){ await pg.evaluate(()=>{const b=document.querySelector('[data-m="strike"]'); b&&b.click();}); await pg.waitForTimeout(60); }
+await pg.waitForSelector('#b-rematch'); ok((await pg.textContent('.panel')).includes('Rematches this session: 1'), 'result screen shows session rematch count');
+await pg.screenshot({path:dir+'/shot-7-rematch-count.png'});
 // rules: no randomness in game code
-const src = await (await pg.request.get(url+'game.js')).text();
-ok(!/Math\.random/.test(src), 'no Math.random in game code');
+const src = (await (await pg.request.get(url+'game.js')).text()) + (await (await pg.request.get(url+'rules.js')).text());
+ok(!/Math\.random/.test(src), 'no Math.random in game.js + rules.js');
+ok(!/localStorage|sessionStorage|document\.cookie/.test(src), 'no storage in game code');
+ok((await pg.goto(url+'?stats'), !(await pg.content()).includes('Fun-test stats')), 'no ?stats page');
 ok(!/\b(bet|wager|stake|gamble|odds|jackpot|payout|casino)\b/i.test(src + await (await pg.request.get(url)).text()), 'no banned words');
 // hot-seat duel picks in secret
 await pg.goto(url); await pg.click('#b-hot'); await pg.click('.ape[data-k="1"]'); await pg.click('.ape[data-k="3"]');
 await pg.evaluate(()=>APE.endGather()); await pg.click('#b-skip'); await pg.click('#b-skip');
-await pg.click('[data-m="strike"]'); ok((await pg.textContent('.log')).includes('Player 1 has picked'), 'hot-seat P1 pick hidden');
-await pg.click('[data-m="guard"]'); ok((await pg.textContent('.log')).includes('blocked'), 'hot-seat round resolves');
+await pg.click('[data-m="strike"]');
+ok(await pg.isVisible('text=Pass the keyboard to Player 2') && !(await pg.$('[data-m]')), 'hot-seat: blank pass screen after P1 pick');
+await pg.screenshot({path:dir+'/shot-8-pass.png'});
+await pg.mouse.click(480,320); ok(await pg.evaluate(()=>APE.screen)==='pass', 'pass screen ignores clicks (needs a key)');
+await pg.keyboard.press('Space'); await pg.waitForSelector('[data-m="guard"]');
+await pg.click('[data-m="guard"]');
+ok((await pg.textContent('#pass')).includes('blocked') && (await pg.textContent('#pass')).includes('back to Player 1'), 'hot-seat: reveal + pass back to Player 1');
+await pg.keyboard.press('Enter'); await pg.waitForSelector('[data-m="strike"]'); ok(true, 'P1 picks again after key press');
 ok(errs.length===0, 'no console errors '+errs.join('|')); console.log('SMOKE PASS'); await b.close();
