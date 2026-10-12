@@ -120,6 +120,16 @@ footer a{color:var(--gold2)}
 .lineup{margin:44px 0 0;border-radius:28px;overflow:hidden;box-shadow:0 30px 70px rgba(16,36,22,.25)}
 .hero .gametitle{max-width:none;opacity:1;font-family:Fredoka,sans-serif;font-weight:700;font-size:clamp(3rem,8vw,6.5rem);line-height:.95;margin:18px 0 0;letter-spacing:-.01em;color:#fff;text-shadow:0 6px 0 rgba(0,0,0,.25),0 10px 40px rgba(0,0,0,.4)}.gametitle span{color:var(--gold2)}
 .hero h1{font-size:clamp(1.8rem,3.8vw,3rem)!important;margin-top:10px!important}
+/* hero: real screen next to the title; art captioned as illustration */
+.herogrid{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:end}
+.heroshot{margin:0;border-radius:18px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.25);background:#0c1c12}
+.heroshot img{display:block;width:100%;height:auto}.heroshot figcaption{font-size:.78rem;padding:6px 12px;color:#e9efe4;background:#0c1c12}
+.illus{position:absolute;z-index:3;right:12px;bottom:90px;font-size:.72rem;font-weight:700;color:#fff;background:rgba(12,28,18,.75);padding:2px 9px;border-radius:99px}
+.cta .illus{top:12px;bottom:auto}
+.pill{background:rgba(12,28,18,.72)!important;border-color:rgba(255,255,255,.35)!important}
+@media(max-width:900px){.herogrid{grid-template-columns:1fr;gap:24px}
+ .hero:before{background:linear-gradient(180deg,rgba(12,28,18,.55) 0%,rgba(12,28,18,.85) 30%,rgba(12,28,18,.85) 100%)!important}
+ .hero p,.hero h1,.hero .gametitle{text-shadow:0 2px 12px rgba(0,0,0,.6)}}
 </style>
 </head>
 <body>
@@ -128,7 +138,7 @@ footer a{color:var(--gold2)}
 <ul><li><a href="#apes">Apes</a></li><li><a href="#world">How it plays</a></li><li><a href="#pvp">Duel</a></li><li><a href="#rpg">Fair play</a></li><li><a href="#art">Screens</a></li><li><a href="#roadmap">Roadmap</a></li></ul>
 </div></nav>
 
-<header class="hero" id="top"><div class="wrap">
+<header class="hero" id="top" aria-label="Going ApeSh!t (background: illustration)"><span class="illus">Illustration</span><div class="wrap"><div class="herogrid"><div>
 <span class="pill"><b></b>In development · text version</span>
 <p class="gametitle">Going ApeSh<span>!</span>t</p>
 <h1>Two apes. One jungle. <em>Secret picks.</em></h1>
@@ -138,7 +148,9 @@ footer a{color:var(--gold2)}
 <a class="btn ghost" href="#world">See the game ↓</a>
 </div>
 <p><small>Plays in your browser, no download.</small></p>
-</div></header>
+</div>
+<figure class="heroshot"><img src="assets/img/text/duel.jpg" alt="Real game screen: a duel reveal in the text version, with a speech bubble on an ape card" width="1200" height="844"><figcaption>Real game screen</figcaption></figure>
+</div></div></header>
 
 <section id="apes"><div class="wrap">
 <div class="center reveal"><div class="eyebrow">The apes</div><h2>Each ape has its own trick</h2></div>
@@ -168,7 +180,7 @@ footer a{color:var(--gold2)}
 <div class="reveal"><div class="eyebrow">The duel</div><h2>Secret picks, revealed together.</h2>
 <p class="lead">Strike, Guard, Feint or Eat, picked in secret and revealed together. Read your rival, break their pattern.</p>
 <ul class="feats">
-<li><span>🎯</span><div><b>No dice in duels: secret picks decide it.</b><small>Read your rival and pick your moment.</small></div></li>
+<li><span>🎯</span><div><b>Secret picks</b><small>Both apes choose, then reveal together.</small></div></li>
 <li><span>⌨️</span><div><b>Buttons or number keys</b><small>Every move has a button and a key.</small></div></li>
 </ul></div>
 </div></section>
@@ -185,7 +197,7 @@ footer a{color:var(--gold2)}
 <div class="gallery">
 <figure class="reveal" style="margin:0"><a href="#lb1"><img src="assets/img/text/golden-race.jpg" alt="Gathering screen on turn 8 with the golden fruit race" loading="lazy"><figcaption>The turn 8 race</figcaption></a></figure>
 <figure class="reveal" style="margin:0"><a href="#lb2"><img src="assets/img/text/duel.jpg" alt="Duel screen with the last reveal and the four move buttons" loading="lazy"><figcaption>A duel reveal</figcaption></a></figure>
-<figure class="reveal" style="margin:0"><a href="#lb3"><img src="assets/img/text/result.jpg" alt="End screen showing what decided the duel and the replay code" loading="lazy"><figcaption>Decided by</figcaption></a></figure>
+<figure class="reveal" style="margin:0"><a href="#lb3"><img src="assets/img/text/result.jpg" alt="End screen showing what decided the duel and the replay code" loading="lazy"><figcaption>The deciding round</figcaption></a></figure>
 </div>
 </div></section>
 <div class="lb" id="lb1"><a class="x" href="#art" aria-label="Close"></a><img src="assets/img/text/golden-race.jpg" alt="Gathering screen on turn 8 with the golden fruit race"><a class="close" href="#art" aria-label="Close">×</a><p>Text version, in development</p></div>
@@ -201,14 +213,14 @@ footer a{color:var(--gold2)}
 </div>
 </div></section>
 
-<section class="cta"><div class="wrap reveal">
+<section class="cta" aria-label="Play now (background: illustration)"><span class="illus">Illustration</span><div class="wrap reveal">
 <h2>One duel takes a few minutes. The rematch takes longer.</h2>
 <a class="btn gold" href="./text/">▶ Play now</a>
 </div></section>
 
 <footer><div class="wrap">
 <span>© Going ApeSh!t · In development</span>
-<span><a href="https://github.com/Carl-Walker-pm/ape">GitHub</a> · No cookies, no tracking.</span>
+<span><a href="https://github.com/Carl-Walker-pm/ape">GitHub</a> · No cookies, no trackers.</span>
 </div></footer>
 </body>
 </html>
