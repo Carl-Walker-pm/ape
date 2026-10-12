@@ -459,7 +459,9 @@ function decisive(w){
 }
 
 // ================= result + replay =================
-const sig = () => G.duel.f.map(f => f.hp).join('/') + '@' + (G.duel.round - 1);
+// full-game signature: final HP @ rounds, plus every round's damage taken and healing, for both duel kinds
+// (zone duels included, so a zone replay checks the whole game, not just HP and the winner)
+const sig = () => G.duel.f.map(f => f.hp).join('/') + '@' + (G.duel.round - 1) + '#' + G.duel.recs.map(r => r.took.join(',') + ':' + r.heal.join(',')).join(';');
 const CODE_VERSION = 'T3';   // bump when choice keys or rules change; older codes are refused with a clear message
 function codeStr(){ return CODE_VERSION + '-' + G.recHead + '-' + G.rec.join(''); }
 function result(){
@@ -477,7 +479,7 @@ function result(){
     t += `Replayed every choice from the code. ${same == null ? 'Same code, same game: run it again and you get this exact result.' : same ? 'IDENTICAL to the original game, HP for HP and round for round:\nthe bot and the rules have no hidden randomness.' : 'MISMATCH with the original game. Please report this code.'}\n\n`;
   }
   t += `REPLAY CODE: ${code}\n  (your choices in order; ?replay=${code} in the address bar plays it back)\n\nRematches this session: ${SESSION.rematches}\n`;
-  G.lastSig = sig(); G.replaying = null;
+  G.lastSig = sig(); G.lastKind = G.zones ? 'zones' : 'moves'; G.replaying = null;   // set for zone and four-move results alike
   screen(t, [
     {label:'Rematch', go:() => { SESSION.rematches++; startGather(); }},
     {label:'Change ape', go:select},
