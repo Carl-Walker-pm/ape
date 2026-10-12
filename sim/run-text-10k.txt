@@ -1,0 +1,42 @@
+Text edition sim (text/gather.js turn budget 12, golden fruit on turn 8; duel play/rules.js), seed 42, 10000 matches per pair
+             vinny  boulder      zip      moe   tinker
+vinny            -    52.0%    49.2%    52.7%    49.4%
+boulder      48.0%        -    48.0%    51.9%    48.3%
+zip          50.8%    52.0%        -    49.5%    51.6%
+moe          47.3%    48.1%    50.5%        -    47.4%
+tinker       50.6%    51.8%    48.4%    52.6%        -
+Range 47.3-52.7% -> PASS (45-55%)
+  vinny    after gathering (vs Boulder): fruit 10, wood 0, club true, golden false
+  boulder  after gathering (vs Boulder): fruit 8, wood 0, club true, golden false
+  zip      after gathering (vs Boulder): fruit 9, wood 0, club true, golden true
+  moe      after gathering (vs Boulder): fruit 10, wood 0, club true, golden false
+  tinker   after gathering (vs Boulder): fruit 8, wood 0, club true, golden false
+
+Text edition sim (text/gather.js turn budget 12, golden fruit on turn 8; duel play/rules.js), seed 7, 10000 matches per pair
+             vinny  boulder      zip      moe   tinker
+vinny            -    51.7%    48.7%    53.6%    50.6%
+boulder      48.3%        -    48.0%    51.7%    46.7%
+zip          51.3%    52.0%        -    49.6%    51.8%
+moe          46.4%    48.3%    50.4%        -    47.2%
+tinker       49.4%    53.3%    48.2%    52.8%        -
+Range 46.4-53.6% -> PASS (45-55%)
+  vinny    after gathering (vs Boulder): fruit 10, wood 0, club true, golden false
+  boulder  after gathering (vs Boulder): fruit 8, wood 0, club true, golden false
+  zip      after gathering (vs Boulder): fruit 9, wood 0, club true, golden true
+  moe      after gathering (vs Boulder): fruit 10, wood 0, club true, golden false
+  tinker   after gathering (vs Boulder): fruit 8, wood 0, club true, golden false
+
+Text edition sim (text/gather.js turn budget 12, golden fruit on turn 8; duel play/rules.js), seed 1234, 10000 matches per pair
+             vinny  boulder      zip      moe   tinker
+vinny            -    52.4%    48.1%    53.5%    50.2%
+boulder      47.6%        -    47.6%    51.9%    47.2%
+zip          51.9%    52.4%        -    50.6%    52.0%
+moe          46.5%    48.1%    49.4%        -    47.1%
+tinker       49.8%    52.8%    48.0%    52.9%        -
+Range 46.5-53.5% -> PASS (45-55%)
+  vinny    after gathering (vs Boulder): fruit 10, wood 0, club true, golden false
+  boulder  after gathering (vs Boulder): fruit 8, wood 0, club true, golden false
+  zip      after gathering (vs Boulder): fruit 9, wood 0, club true, golden true
+  moe      after gathering (vs Boulder): fruit 10, wood 0, club true, golden false
+  tinker   after gathering (vs Boulder): fruit 8, wood 0, club true, golden false
+

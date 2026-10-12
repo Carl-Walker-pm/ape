@@ -1,0 +1,56 @@
+Sample game (headless smoke run: Vinny vs Zip bot, Easy)
+
+Turn 1: Vinny chops a tree: +1 wood. Zip chops a tree: +1 wood.
+Turn 2: Vinny climbs the canopy: +3 fruit. Zip chops a tree: +1 wood.
+Turn 3: Vinny chops a tree: +1 wood. Zip catches their breath.
+   >> Nothing ready there. Next one in 4 turns.
+Turn 4: Vinny catches their breath. Zip chops a tree: +1 wood.
+Turn 5: Vinny chops a tree: +1 wood. Zip chops a tree: +1 wood.
+   >> Nothing ready there. Next one in 2 turns.
+!! Something golden is ripening in the centre...
+Turn 6: Vinny catches their breath. Zip catches their breath.
+!! GOLDEN FRUIT IN THE CENTRE! Race for it (uses this turn).
+Turn 7: Vinny chops a tree: +1 wood. Zip shakes a bush: +1 fruit.
+Turn 8: * Zip grabs the GOLDEN FRUIT: +1 fruit and a 4th Eat in the duel.
+Turn 9: Vinny chops a tree: +1 wood. Zip shakes a bush: +1 fruit.
+Turn 10: Vinny climbs the canopy: +3 fruit. Zip catches their breath.
+Turn 11: Vinny chops a tree: +1 wood. Zip shakes a bush: +1 fruit.
+Zip (bot) has crafted a club.
+Round 1: Vinny GUARD vs Zip STRIKE. Vinny guards and hits back for 7. Zip strikes, but Vinny blocks it.
+   >> Can't Guard twice in a row. Pick another move.
+Round 2: Vinny STRIKE vs Zip FEINT. Vinny strikes! Zip feints and gets caught. Zip takes 16.
+Round 3: Vinny STRIKE vs Zip FEINT. Vinny strikes! Zip feints and gets caught. Zip takes 16.
+Round 4: Vinny STRIKE vs Zip GUARD. Vinny strikes, but Zip blocks it. Zip guards and hits back for 7.
+Round 5: Vinny STRIKE vs Zip STRIKE. Vinny strikes! Zip strikes! Zip takes 13. Vinny takes 14.
+Round 6: Vinny STRIKE vs Zip GUARD. Vinny strikes, but Zip blocks it. Zip guards and hits back for 7.
+Round 7: Vinny STRIKE vs Zip STRIKE. Vinny strikes! Zip strikes! Zip takes 13. Vinny takes 14.
+Round 8: Vinny STRIKE vs Zip EAT FRUIT. Vinny strikes! Zip eats a fruit (+20 HP). Zip takes 13.
+Round 9: Vinny STRIKE vs Zip GUARD. Vinny strikes, but Zip blocks it. Zip guards and hits back for 7.
+Round 10: Vinny STRIKE vs Zip STRIKE. Vinny strikes! Zip strikes! Zip takes 13. Vinny takes 14.
+Round 11: Vinny STRIKE vs Zip EAT FRUIT. Vinny strikes! Zip eats a fruit (+20 HP). Zip takes 13.
+Round 12: Vinny STRIKE vs Zip EAT FRUIT. Vinny strikes! Zip eats a fruit (+20 HP). Zip takes 13.
+Round 13: Vinny STRIKE vs Zip GUARD. Vinny strikes, but Zip blocks it. Zip guards and hits back for 7.
+Round 14: Vinny STRIKE vs Zip STRIKE. Vinny strikes! Zip strikes! Zip takes 13. Vinny takes 14.
+Round 15: Vinny STRIKE vs Zip EAT FRUIT. Vinny strikes! Zip eats a fruit (+20 HP). Zip takes 13.
+Round 16: Vinny STRIKE vs Zip GUARD. Vinny strikes, but Zip blocks it. Zip guards and hits back for 7.
+Round 17: Vinny STRIKE vs Zip STRIKE. Vinny strikes! Zip strikes! Zip takes 13. Vinny takes 14.
+
+GOING APESH!T                                             RESULT
+════════════════════════════════════════════════════════════════
+
+   ZIP WINS THIS ONE
+
+VINNY      [--------------------]   0/110 HP
+           fruit 5, Eats left 3, club +4
+
+ZIP        [####----------------]  21/97 HP
+           fruit 1, Eats left 0, club +4, guarded last round
+
+Final round: Round 18: Vinny STRIKE vs Zip GUARD. Vinny strikes, but Zip blocks it. Zip guards and hits back for 7.
+18 rounds.
+
+Rematches this session: 0
+
+   1) Rematch
+   2) Change ape
+   3) Title
