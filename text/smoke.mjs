@@ -28,7 +28,7 @@ if (!base) { const http = await import('node:http'), root = path.resolve(here, '
     if (!f.startsWith(root) || !fs.existsSync(f)) { r.writeHead(404); return r.end(); } r.writeHead(200, {'content-type': MIME[path.extname(f)] || 'application/octet-stream'}); fs.createReadStream(f).pipe(r); });
   await new Promise(r => srv.listen(0, '127.0.0.1', r)); srv.unref(); base = `http://127.0.0.1:${srv.address().port}/`; console.log('serving this checkout at ' + base); }
 process.on('unhandledRejection', e => fail('error: ' + (e && e.message || e)));
-const { chromium } = require('/workspace/pw/node_modules/playwright');
+const { chromium } = require(process.env.PLAYWRIGHT_PATH || '/workspace/pw/node_modules/playwright');
 // Ape names not yet approved by Carl. Mode depends on the page PATH:
 //  - landing pages (anything not under /text/): FAIL, incl. screenshot alt text, captions and titles.
 //  - inside the game (/text/): WARN only, unless strict: --names-strict, NAMES_STRICT=1 or NAMES_APPROVED=0.
